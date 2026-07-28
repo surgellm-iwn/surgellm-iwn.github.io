@@ -1,0 +1,1726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SURGeLLM — Task-Aware Feature Gating with Class-Balanced Normalization</title>
+<meta name="description" content="SURGeLLM: a unified multi-task transformer with a per-dimension surgical feature gate, task-conditioned prefix tokens, and Instance-Weighted Normalization. Istanbul Technical University, arXiv:2606.24259.">
+<meta name="author" content="Noor Islam S. Mohammad, Uluğ Bayazıt">
+<meta property="og:title" content="SURGeLLM — Task-Aware Feature Gating with Class-Balanced Normalization">
+<meta property="og:description" content="The gate was architecturally sound. The statistics it was fed were not. +0.130 macro-F1 on authorship detection.">
+<meta property="og:type" content="article">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300..700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   TOKENS
+   Palette: the surgical field — sterile ground, drape teal,
+   a single incision red reserved for deltas and the IWN result.
+   ============================================================ */
+:root{
+  --field:      #F2F5F4;
+  --paper:      #FFFFFF;
+  --ink:        #0E1C1B;
+  --drape:      #17514E;
+  --drape-2:    #2A7370;
+  --drape-ink:  #08201F;
+  --incision:   #A8322C;
+  --graphite:   #63736F;
+  --rule:       #DAE2E0;
+
+  --display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --body:    "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --wide: 1120px;
+  --text: 720px;
+  --gap: clamp(1rem, 3vw, 2rem);
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior: auto; }
+  *{ animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+body{
+  margin:0;
+  background: var(--field);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: clamp(16px, 0.55vw + 14.6px, 18px);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+a{ color: var(--drape); text-underline-offset: .18em; text-decoration-thickness: .06em; }
+a:hover{ color: var(--incision); }
+:focus-visible{ outline: 2px solid var(--incision); outline-offset: 3px; border-radius: 2px; }
+
+.skip{
+  position:absolute; left:-9999px; top:0; background: var(--ink); color:#fff;
+  padding:.6rem 1rem; z-index: 999; font-family: var(--display);
+}
+.skip:focus{ left:.5rem; top:.5rem; }
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+.topbar{
+  position: sticky; top:0; z-index: 50;
+  background: rgba(242,245,244,.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar__in{
+  max-width: var(--wide); margin:0 auto; padding: .7rem var(--gap);
+  display:flex; align-items:center; gap:1rem; flex-wrap: wrap;
+}
+.mark{
+  font-family: var(--display);
+  font-weight: 800; font-size: 1.02rem; letter-spacing: -.02em;
+  font-variation-settings: "wdth" 88;
+  text-decoration:none; color: var(--ink); white-space: nowrap;
+}
+.mark span{ color: var(--drape-2); }
+.navlinks{
+  display:flex; gap: .1rem; flex-wrap: wrap; margin-left:auto;
+  font-family: var(--display); font-size: .78rem; letter-spacing: .02em;
+}
+.navlinks a{
+  color: var(--graphite); text-decoration:none; padding:.35rem .5rem; border-radius: 3px;
+}
+.navlinks a:hover{ color: var(--ink); background: rgba(23,81,78,.07); }
+.navlinks a[aria-current="true"]{ color: var(--drape); background: rgba(23,81,78,.1); }
+
+/* ============================================================
+   LAYOUT PRIMITIVES
+   ============================================================ */
+.wrap{ max-width: var(--wide); margin: 0 auto; padding: 0 var(--gap); }
+.prose{ max-width: var(--text); }
+section{ padding: clamp(3rem, 6vw, 5rem) 0; border-top: 1px solid var(--rule); }
+section:first-of-type{ border-top: 0; }
+
+.eyebrow{
+  font-family: var(--display); font-size: .72rem; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--drape-2);
+  margin: 0 0 .7rem;
+}
+h1,h2,h3,h4{ font-family: var(--display); font-weight: 700; letter-spacing:-.02em; line-height:1.1; }
+h2{ font-size: clamp(1.7rem, 3.2vw, 2.5rem); margin:.2rem 0 1rem; font-variation-settings:"wdth" 92; }
+h3{ font-size: clamp(1.12rem, 1.6vw, 1.3rem); margin: 2.2rem 0 .6rem; }
+h4{ font-size: .95rem; margin: 1.5rem 0 .4rem; letter-spacing: 0; }
+p{ margin: 0 0 1rem; }
+.lede{ font-size: 1.1em; color: #22322F; }
+.small{ font-size: .86rem; color: var(--graphite); }
+.mono{ font-family: var(--mono); font-size: .9em; font-variant-numeric: tabular-nums; }
+strong{ font-weight: 700; }
+
+/* ============================================================
+   HERO — the drape
+   ============================================================ */
+.hero{
+  background: var(--drape-ink);
+  color: #E7EFED;
+  border-top: 0;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0 clamp(2.5rem, 5vw, 3.5rem);
+  position: relative; overflow: hidden;
+}
+.hero::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(60% 90% at 22% 0%, rgba(42,115,112,.5), transparent 70%);
+}
+.hero > *{ position: relative; z-index:1; }
+.hero .eyebrow{ color: #7FB8B0; }
+.hero h1{
+  font-size: clamp(3.2rem, 11vw, 7.5rem);
+  margin: 0; color:#fff; line-height:.92;
+  font-variation-settings: "wdth" 78; font-weight: 800;
+}
+.hero h1 .lc{ text-transform: none; }
+.hero .subtitle{
+  font-family: var(--display); font-weight: 400;
+  font-size: clamp(1.05rem, 2.1vw, 1.5rem); line-height:1.25;
+  max-width: 30ch; margin: 1rem 0 0; color:#CBDEDA;
+}
+.authors{ margin: 1.8rem 0 0; font-size: .98rem; color:#DCEAE7; }
+.authors a{ color:#fff; }
+.authors .aff{ color:#8FBDB6; font-size:.88rem; display:block; margin-top:.25rem; }
+
+.thesis{
+  margin: 2.4rem 0 0; padding: 1.2rem 0 0; border-top: 1px solid rgba(255,255,255,.16);
+  max-width: 46ch; font-size: 1.05rem; color:#E7EFED;
+}
+
+/* three-stop arc */
+.arc{ margin: 2.2rem 0 0; }
+.arc__label{
+  font-family: var(--display); font-size:.7rem; letter-spacing:.14em;
+  text-transform: uppercase; color:#7FB8B0; margin-bottom:.85rem;
+}
+.arc__track{ display:flex; gap: clamp(.5rem,2vw,1.4rem); flex-wrap: wrap; }
+.stop{ flex: 1 1 130px; min-width: 120px; }
+.stop__bar{ height: 3px; background: rgba(255,255,255,.22); margin-bottom:.55rem; }
+.stop__num{
+  font-family: var(--mono); font-size: clamp(1.5rem,3.4vw,2.1rem); font-weight:500;
+  color:#fff; font-variant-numeric: tabular-nums; display:block; line-height:1;
+}
+.stop__cap{ font-size:.78rem; color:#9CC5BF; display:block; margin-top:.4rem; line-height:1.35; }
+.stop--down .stop__bar{ background: #C4655F; }
+.stop--down .stop__num{ color:#F0A9A4; }
+.stop--up .stop__bar{ background: #6FD3B8; }
+.stop--up .stop__num{ color:#8FE9CD; }
+
+/* buttons */
+.btns{ display:flex; flex-wrap:wrap; gap:.55rem; margin: 2.4rem 0 0; }
+.btn{
+  font-family: var(--display); font-size:.85rem; font-weight:600; letter-spacing:.01em;
+  text-decoration:none; padding:.6rem .95rem; border-radius: 2px;
+  border:1px solid rgba(255,255,255,.3); color:#fff; display:inline-flex; align-items:center; gap:.45rem;
+  background: transparent; cursor:pointer; transition: background .15s ease, border-color .15s ease;
+}
+.btn:hover{ background: rgba(255,255,255,.12); border-color:#fff; color:#fff; }
+.btn--solid{ background:#fff; color: var(--drape-ink); border-color:#fff; }
+.btn--solid:hover{ background:#CBDEDA; color: var(--drape-ink); }
+.btn .tbd{
+  font-family: var(--mono); font-size:.6rem; letter-spacing:.06em;
+  border:1px solid currentColor; border-radius:2px; padding:0 .25em; opacity:.8;
+}
+
+/* feature strip: s ∈ R^16 */
+.strip{ margin: 2.8rem 0 0; }
+.strip__grid{
+  display:grid; grid-template-columns: repeat(16, minmax(0,1fr)); gap: 3px; margin-top:.7rem;
+}
+.cell{
+  aspect-ratio: 1/2.1; border-radius:1px; background: rgba(255,255,255,.16);
+  position:relative; cursor: help;
+}
+.cell.lex{ background: rgba(111,211,184,.5); }
+.cell.surf{ background: rgba(255,255,255,.3); }
+.cell:hover, .cell:focus-visible{ background:#fff; }
+.cell::after{
+  content: attr(data-name);
+  position:absolute; bottom: calc(100% + 6px); left:50%; transform: translateX(-50%);
+  background:#fff; color: var(--drape-ink); font-family: var(--mono); font-size:.68rem;
+  padding:.25rem .45rem; white-space:nowrap; opacity:0; pointer-events:none; z-index:5;
+  transition: opacity .12s ease;
+}
+.cell:hover::after, .cell:focus-visible::after{ opacity:1; }
+@media (max-width: 620px){
+  .strip__grid{ grid-template-columns: repeat(8, minmax(0,1fr)); }
+  .cell{ aspect-ratio: 1/1.4; }
+}
+
+/* ============================================================
+   CONTENT BLOCKS
+   ============================================================ */
+.grid2{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: clamp(1.2rem,3vw,2.4rem); }
+.grid3{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: clamp(1rem,2.4vw,1.8rem); }
+
+.card{
+  background: var(--paper); border:1px solid var(--rule); border-radius:3px;
+  padding: 1.3rem 1.4rem;
+}
+.card h4{ margin-top:0; color: var(--drape); font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; }
+.card p:last-child{ margin-bottom:0; }
+
+.callout{
+  border-left: 3px solid var(--drape); background: var(--paper);
+  padding: 1rem 1.2rem; margin: 1.6rem 0;
+}
+.callout--warn{ border-left-color: var(--incision); }
+.callout p:last-child{ margin-bottom:0; }
+.callout__tag{
+  font-family: var(--display); font-size:.68rem; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color: var(--drape); display:block; margin-bottom:.35rem;
+}
+.callout--warn .callout__tag{ color: var(--incision); }
+
+/* equations */
+.eq{
+  display:flex; align-items:center; gap:1rem; margin: 1.2rem 0;
+  font-family: var(--body); font-size:1.02rem;
+}
+.eq__body{ flex:1; overflow-x:auto; padding: .55rem .2rem; }
+.eq__n{ font-family: var(--mono); font-size:.8rem; color: var(--graphite); white-space:nowrap; }
+.frac{ display:inline-flex; flex-direction:column; vertical-align:-.5em; text-align:center; margin:0 .2em; }
+.frac .num{ border-bottom:1px solid currentColor; padding:0 .4em .1em; }
+.frac .den{ padding:.1em .4em 0; }
+var, .v{ font-style: italic; font-family: var(--body); }
+.op{ font-style: normal; padding:0 .18em; }
+sub, sup{ font-size:.68em; line-height:0; }
+
+/* tables */
+figure{ margin: 2rem 0; }
+figcaption{
+  font-size:.84rem; color: var(--graphite); margin-top:.7rem; line-height:1.5;
+  max-width: 78ch;
+}
+figcaption b{ color: var(--ink); font-family: var(--display); font-size:.9em; letter-spacing:.02em; }
+.table-scroll{
+  overflow-x:auto; background: var(--paper); border:1px solid var(--rule); border-radius:3px;
+}
+table{ border-collapse: collapse; width:100%; font-size:.84rem; }
+caption{ text-align:left; padding:.9rem 1rem .2rem; font-size:.84rem; color: var(--graphite); }
+th, td{ padding:.52rem .7rem; text-align:right; white-space:nowrap; border-bottom:1px solid var(--rule); }
+th:first-child, td:first-child{ text-align:left; }
+thead th{
+  font-family: var(--display); font-weight:700; font-size:.72rem; letter-spacing:.06em;
+  text-transform:uppercase; color: var(--drape); border-bottom:1.5px solid var(--drape);
+  background: var(--paper); position: sticky; top:0;
+}
+tbody tr:hover{ background: rgba(23,81,78,.045); }
+tbody tr:last-child td{ border-bottom:0; }
+td.num, th.num{ font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.best{ font-weight:600; color: var(--drape); }
+td.pos{ color:#166B4F; }
+td.neg{ color: var(--incision); }
+.rowgroup td{ background: rgba(23,81,78,.05); font-family: var(--display); font-size:.7rem;
+  letter-spacing:.1em; text-transform:uppercase; color: var(--drape); }
+tr.hi td{ background: rgba(168,50,44,.06); }
+tr.hi td:first-child{ box-shadow: inset 3px 0 0 var(--incision); }
+.sd{ color: var(--graphite); font-size:.9em; }
+
+/* ============================================================
+   IWN BENCH (signature)
+   ============================================================ */
+.bench{
+  background: var(--paper); border:1px solid var(--rule); border-radius:3px;
+  padding: clamp(1.2rem,3vw,2rem); margin-top: 1.6rem;
+}
+.bench__head{ display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap; }
+.bench__title{ font-family: var(--display); font-weight:700; font-size:1rem; margin:0; }
+.bench__ctrl{ margin: 1.4rem 0 .4rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.bench__ctrl label{ font-family: var(--display); font-size:.78rem; font-weight:600; }
+input[type=range]{ flex:1; min-width: 200px; accent-color: var(--drape); }
+.readout{
+  font-family: var(--mono); font-size:.82rem; background: var(--field);
+  padding:.3rem .55rem; border-radius:2px; white-space:nowrap;
+}
+.bench svg{ width:100%; height:auto; display:block; margin-top:.6rem; }
+.bench__stats{
+  display:flex; gap:1.6rem; flex-wrap:wrap; margin-top:1.1rem;
+  border-top:1px solid var(--rule); padding-top:1rem;
+}
+.stat{ min-width: 130px; }
+.stat__k{ font-family: var(--display); font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color: var(--graphite); }
+.stat__v{ font-family: var(--mono); font-size:1.2rem; font-variant-numeric: tabular-nums; }
+
+/* dumbbell (real D4 data) */
+.dumb{ margin-top:1.2rem; }
+.dumb__row{ display:grid; grid-template-columns: 6.5rem 1fr; gap:.8rem; align-items:center; margin:.55rem 0; }
+.dumb__k{ font-family: var(--mono); font-size:.78rem; }
+.dumb__track{ position:relative; height:22px; background: var(--field); border-radius:2px; }
+.dumb__seg{ position:absolute; top:10px; height:2px; background: var(--rule); }
+.dumb__a,.dumb__b{ position:absolute; top:5px; width:12px; height:12px; border-radius:50%; transform: translateX(-6px); }
+.dumb__a{ background: var(--graphite); }
+.dumb__b{ background: var(--incision); }
+.dumb__axis{ display:grid; grid-template-columns: 6.5rem 1fr; gap:.8rem; margin-top:.4rem; }
+.dumb__ticks{ display:flex; justify-content:space-between; font-family: var(--mono); font-size:.68rem; color: var(--graphite); }
+.legend{ display:flex; gap:1.2rem; flex-wrap:wrap; font-size:.8rem; color: var(--graphite); margin-top:.9rem; }
+.legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:.35rem; }
+
+/* heatmap */
+.heat{ overflow-x:auto; }
+.heat__grid{ min-width: 720px; display:grid; grid-template-columns: 7.5rem repeat(10, 1fr); gap:2px; }
+.heat__h{
+  font-family: var(--mono); font-size:.64rem; color: var(--graphite);
+  writing-mode: vertical-rl; transform: rotate(180deg); padding:.3rem 0; justify-self:center;
+}
+.heat__r{ font-family: var(--display); font-size:.74rem; font-weight:600; align-self:center; padding-right:.5rem; }
+.heat__c{
+  aspect-ratio: 2.4/1; display:grid; place-items:center;
+  font-family: var(--mono); font-size:.66rem; font-variant-numeric: tabular-nums;
+  border-radius:1px; color: var(--ink);
+}
+.heat__c.dark{ color:#fff; }
+
+/* pareto */
+.chart{ background: var(--paper); border:1px solid var(--rule); border-radius:3px; padding:1.2rem; }
+.chart svg{ width:100%; height:auto; display:block; }
+
+/* pipeline */
+.pipe{ background: var(--paper); border:1px solid var(--rule); border-radius:3px; padding:1.2rem; }
+.pipe svg{ width:100%; height:auto; display:block; }
+.pipe .bx{ fill:#fff; stroke: var(--rule); stroke-width:1; }
+.pipe .bx-a{ fill: rgba(42,115,112,.09); stroke: var(--drape-2); }
+.pipe .bx-b{ fill: rgba(168,50,44,.07); stroke: var(--incision); }
+.pipe .tx{ font-family: var(--display); font-size:12.5px; fill: var(--ink); }
+.pipe .tx-s{ font-family: var(--mono); font-size:10.5px; fill: var(--graphite); }
+.pipe .ln{ stroke: var(--graphite); stroke-width:1.2; fill:none; }
+
+/* lists */
+ul.tight, ol.tight{ padding-left: 1.15rem; margin:0 0 1rem; }
+ul.tight li, ol.tight li{ margin-bottom:.4rem; }
+ul.checklist{ list-style:none; padding-left:0; }
+ul.checklist li{ padding-left:1.6rem; position:relative; margin-bottom:.5rem; }
+ul.checklist li::before{
+  content:"✓"; position:absolute; left:0; color: var(--drape-2); font-family: var(--display); font-weight:700;
+}
+
+/* bibtex */
+.bib{ position:relative; }
+pre{
+  background: var(--drape-ink); color:#D8E7E4; padding:1.2rem 1.3rem; border-radius:3px;
+  overflow-x:auto; font-family: var(--mono); font-size:.8rem; line-height:1.65; margin:0;
+}
+pre .k{ color:#8FE9CD; }
+.copy{
+  position:absolute; top:.7rem; right:.7rem;
+  font-family: var(--display); font-size:.72rem; font-weight:600;
+  background: rgba(255,255,255,.14); color:#fff; border:1px solid rgba(255,255,255,.3);
+  padding:.35rem .6rem; border-radius:2px; cursor:pointer;
+}
+.copy:hover{ background: rgba(255,255,255,.26); }
+
+/* footer */
+footer{
+  background: var(--drape-ink); color:#9CC5BF; padding: 3rem 0 3.5rem; font-size:.86rem;
+}
+footer a{ color:#CBDEDA; }
+footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap:wrap; }
+
+@media print{
+  .topbar, .btns, .copy, .bench__ctrl{ display:none; }
+  body{ background:#fff; font-size: 10pt; }
+  .hero{ background:#fff; color:#000; }
+  .hero h1, .hero .subtitle, .authors, .thesis{ color:#000; }
+  pre{ background:#f2f2f2; color:#000; }
+  section{ page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar__in">
+    <a class="mark" href="#top">SURGe<span>LLM</span></a>
+    <nav class="navlinks" aria-label="Sections">
+      <a href="#abstract">Abstract</a>
+      <a href="#method">Method</a>
+      <a href="#iwn">IWN</a>
+      <a href="#data">Data</a>
+      <a href="#results">Results</a>
+      <a href="#ablations">Ablations</a>
+      <a href="#theory">Theory</a>
+      <a href="#limits">Limitations</a>
+      <a href="#repro">Reproducibility</a>
+      <a href="#cite">Cite</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <p class="eyebrow">Istanbul Technical University · arXiv:2606.24259 · June 2026</p>
+    <h1>SURGe<span class="lc">LLM</span></h1>
+    <p class="subtitle">Rethinking multi-task evaluation through task-aware feature gating with class-balanced normalization</p>
+
+    <p class="authors">
+      <a href="#">Noor Islam S. Mohammad</a><sup>1</sup> &nbsp;·&nbsp;
+      <a href="#">Uluğ Bayazıt</a><sup>2</sup>
+      <span class="aff">Department of Computer Science, Istanbul Technical University · <span class="mono">{islam23, ulugbayazit}@itu.edu.tr</span> &nbsp;<sup>1</sup>Corresponding author &nbsp;<sup>2</sup>Supervising author</span>
+    </p>
+
+    <p class="thesis">A lexical feature gate that helps on three heterogeneous tasks and <em>hurts</em> on the fourth — until you fix the statistics it is fed. The architecture was never the problem.</p>
+
+    <div class="arc" role="group" aria-label="Authorship detection macro-F1 across three configurations">
+      <p class="arc__label">D<sub>4</sub> authorship detection · macro-F<sub>1</sub> · RoBERTa backbone</p>
+      <div class="arc__track">
+        <div class="stop">
+          <div class="stop__bar"></div>
+          <span class="stop__num">0.762</span>
+          <span class="stop__cap">Baseline encoder,<br>no gate</span>
+        </div>
+        <div class="stop stop--down">
+          <div class="stop__bar"></div>
+          <span class="stop__num">0.711</span>
+          <span class="stop__cap">Add the gate on<br>globally standardized features</span>
+        </div>
+        <div class="stop stop--up">
+          <div class="stop__bar"></div>
+          <span class="stop__num">0.892</span>
+          <span class="stop__cap">Same gate, class-balanced<br>statistics (IWN)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <a class="btn btn--solid" href="surgellm.pdf">Paper (PDF) <span class="tbd">add file</span></a>
+      <a class="btn" href="https://arxiv.org/abs/2606.24259">arXiv</a>
+      <a class="btn" href="#">Code <span class="tbd">add URL</span></a>
+      <a class="btn" href="#">Slides <span class="tbd">add URL</span></a>
+      <a class="btn" href="#">Poster <span class="tbd">add URL</span></a>
+      <a class="btn" href="#cite">BibTeX</a>
+    </div>
+
+    <div class="strip">
+      <p class="arc__label">The surgical feature vector <span class="mono">s ∈ ℝ<sup>16</sup></span> — ten lexical indicator groups, six surface statistics. Hover a cell.</p>
+      <div class="strip__grid" id="strip"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ABSTRACT
+     ============================================================ -->
+<section id="abstract">
+  <div class="wrap">
+    <p class="eyebrow">Abstract</p>
+    <div class="prose">
+      <p class="lede">Fine-tuned encoders deployed across heterogeneous NLP tasks face three compounding problems: mismatched inductive biases, class-imbalance corruption of feature statistics, and no mechanism to condition attention on external lexical knowledge.</p>
+      <p>We introduce <strong>SURGeLLM</strong>, a unified transformer framework that addresses each with a dedicated lightweight module: a <strong>surgical feature gate</strong> (a learned per-dimension sigmoid over curated lexical indicators and <span class="mono">[CLS]</span>, which provably degenerates to identity when features are uninformative), <strong>task-conditioned prefix tokens</strong> (quantized feature values and task identity prepended to every input), and <strong>Instance-Weighted Normalization</strong> (IWN, which removes class-prior bias from gate statistics). We prove an excess-risk bound linking gate benefit to surgical feature alignment.</p>
+      <p>Across four tasks — SST-2, multi-hop retrieval, LLM-prompt attribution, and authorship detection — covering 17,830 examples and eleven model variants over three seeds, the IWN variant achieves macro-F<sub>1</sub> <strong>0.940</strong> (+0.034 over the strongest non-IWN variant; +0.036 over the RoBERTa baseline; <strong>+0.130</strong> on authorship detection). A random-vocabulary control (−0.028 avg. F<sub>1</sub>) confirms gains are lexical, not parametric. Code, vocabularies, and a 99.5%-recovery auto-extraction recipe are released.</p>
+    </div>
+
+    <h3>What this paper contributes</h3>
+    <div class="grid3">
+      <div class="card">
+        <h4>Framework</h4>
+        <p>A unified multi-task encoder with per-dimension feature gates, task-conditioned prefix tokens, and IWN. Plug-compatible with any HuggingFace encoder; ~1.2M added parameters, about 1% of RoBERTa-base.</p>
+      </div>
+      <div class="card">
+        <h4>Theory</h4>
+        <p>An excess-risk bound (Theorem 1) linking gate benefit to surgical feature alignment <span class="mono">ρ<sub>k</sub></span>, and a degeneracy result (Proposition 2) proving the gate is safe when features carry no signal.</p>
+      </div>
+      <div class="card">
+        <h4>Empirics</h4>
+        <p>Eleven variants over four encoder backbones plus T5-base, three seeds, four-part vocabulary sensitivity study, and a random-vocabulary control that separates lexical content from added capacity.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     METHOD
+     ============================================================ -->
+<section id="method">
+  <div class="wrap">
+    <p class="eyebrow">Method</p>
+    <h2>Four modules, one encoder</h2>
+    <div class="prose">
+      <p>Let <span class="mono">T = {t<sub>1</sub>, …, t<sub>4</sub>}</span> be a fixed task set, each with label space <span class="mono">Y<sub>t<sub>k</sub></sub></span>. We fit a single model <span class="mono">f<sub>θ</sub>: X × T → ∪<sub>k</sub> Y<sub>t<sub>k</sub></sub></span> minimizing the multi-task empirical risk:</p>
+    </div>
+
+    <div class="eq prose">
+      <div class="eq__body">
+        <span class="v">L</span>(θ) = <span class="op">Σ</span><sub>k=1..|T|</sub>
+        <span class="frac"><span class="num"><span class="v">w<sub>k</sub></span></span><span class="den">|<span class="v">D<sub>k</sub></span>|</span></span>
+        <span class="op">Σ</span><sub>(x,y,t<sub>k</sub>) ∈ D<sub>k</sub></sub>
+        ℓ(<span class="v">f<sub>θ</sub></span>(x, t<sub>k</sub>), y)
+      </div>
+      <span class="eq__n">(1)</span>
+    </div>
+
+    <div class="prose">
+      <p>with cross-entropy loss ℓ and <span class="mono">w<sub>k</sub> = 1</span> throughout, relying on per-task batch sampling for balance. The encoder, the feature projection, the gate matrices, the task-embedding matrix, and the prefix embeddings are <em>shared</em>; only the four two-layer classification heads are task-specific. Shared parameters are over 99% of the total, which is what makes the multi-task framing meaningful in the MT-DNN sense.</p>
+    </div>
+
+    <figure class="pipe">
+      <svg viewBox="0 0 760 560" role="img" aria-labelledby="pipe-title pipe-desc">
+        <title id="pipe-title">SURGeLLM forward pass</title>
+        <desc id="pipe-desc">Input text splits into two lanes. The left lane extracts a sixteen-dimensional surgical feature vector, standardizes it with class-balanced statistics, and projects it. The right lane builds a prefix, runs the encoder, and adds a task embedding to the CLS vector. Both lanes meet at a per-dimension sigmoid gate, whose fused output feeds a task-specific head.</desc>
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#63736F"></path>
+          </marker>
+        </defs>
+
+        <rect class="bx" x="280" y="14" width="200" height="42" rx="2"></rect>
+        <text class="tx" x="380" y="34" text-anchor="middle">Input text</text>
+        <text class="tx-s" x="380" y="48" text-anchor="middle">x (untruncated)</text>
+
+        <path class="ln" d="M380,56 L380,74 L170,74 L170,96" marker-end="url(#ar)"></path>
+        <path class="ln" d="M380,56 L380,74 L590,74 L590,96" marker-end="url(#ar)"></path>
+
+        <rect class="bx bx-a" x="30" y="98" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="170" y="120" text-anchor="middle">Surgical vocabulary — 10 groups</text>
+        <text class="tx-s" x="170" y="136" text-anchor="middle">s(x) ∈ ℝ¹⁶  (Eq. 4, + 6 surface stats)</text>
+
+        <rect class="bx" x="450" y="98" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="590" y="120" text-anchor="middle">Task-conditioned prefix ⊕ x</text>
+        <text class="tx-s" x="590" y="136" text-anchor="middle">[TASK:t | F1:v₁ | … | F16:v₁₆]  (Eq. 12)</text>
+
+        <path class="ln" d="M170,150 L170,186" marker-end="url(#ar)"></path>
+        <path class="ln" d="M590,150 L590,186" marker-end="url(#ar)"></path>
+
+        <rect class="bx bx-b" x="30" y="188" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="170" y="210" text-anchor="middle">Standardize</text>
+        <text class="tx-s" x="170" y="226" text-anchor="middle">global (Eq. 8)  →  IWN class-balanced (Eq. 11)</text>
+
+        <rect class="bx" x="450" y="188" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="590" y="210" text-anchor="middle">Encoder E<tspan dy="3" font-size="9">φ</tspan></text>
+        <text class="tx-s" x="590" y="226" text-anchor="middle">BERT · RoBERTa · DistilBERT · ALBERT</text>
+
+        <path class="ln" d="M170,240 L170,276" marker-end="url(#ar)"></path>
+        <path class="ln" d="M590,240 L590,276" marker-end="url(#ar)"></path>
+
+        <rect class="bx" x="30" y="278" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="170" y="300" text-anchor="middle">Feature projection</text>
+        <text class="tx-s" x="170" y="316" text-anchor="middle">s′ = ReLU(W<tspan font-size="8" dy="2">s</tspan><tspan dy="-2"> </tspan>s̃ + b<tspan font-size="8" dy="2">s</tspan>)  (Eq. 5)</text>
+
+        <rect class="bx" x="450" y="278" width="280" height="52" rx="2"></rect>
+        <text class="tx" x="590" y="300" text-anchor="middle">Task offset</text>
+        <text class="tx-s" x="590" y="316" text-anchor="middle">h̃ = h + 0.1 · E<tspan font-size="8" dy="2">t</tspan>   (Eq. 3)</text>
+
+        <path class="ln" d="M170,330 L170,360 L300,360 L300,384" marker-end="url(#ar)"></path>
+        <path class="ln" d="M590,330 L590,360 L460,360 L460,384" marker-end="url(#ar)"></path>
+
+        <rect class="bx bx-a" x="190" y="386" width="380" height="52" rx="2"></rect>
+        <text class="tx" x="380" y="408" text-anchor="middle">Per-dimension gate</text>
+        <text class="tx-s" x="380" y="424" text-anchor="middle">g = σ(W<tspan font-size="8" dy="2">g</tspan><tspan dy="-2">[h̃ ; s′] + b</tspan><tspan font-size="8" dy="2">g</tspan><tspan dy="-2">) ∈ (0,1)</tspan><tspan font-size="8" dy="-4">d</tspan>  (Eq. 6)</text>
+
+        <path class="ln" d="M380,438 L380,464" marker-end="url(#ar)"></path>
+
+        <rect class="bx" x="190" y="466" width="380" height="44" rx="2"></rect>
+        <text class="tx-s" x="380" y="493" text-anchor="middle">ĥ = LN( g ⊙ h̃ + (1 − g) ⊙ s′ )   (Eq. 7)</text>
+
+        <path class="ln" d="M380,510 L380,528" marker-end="url(#ar)"></path>
+        <text class="tx" x="380" y="548" text-anchor="middle">Task-specific head k  →  ŷ</text>
+      </svg>
+      <figcaption><b>Figure 1.</b> The forward pass. The prefix injects feature values as in-context tokens visible to every attention layer; the gate re-weights the final <span class="mono">[CLS]</span> after all attention has resolved. They operate at different representational scales and are complements, not substitutes — removing either degrades performance.</figcaption>
+    </figure>
+
+    <h3>Surgical feature extraction</h3>
+    <div class="prose">
+      <p>For each of ten case-insensitive indicator groups <span class="mono">v<sub>j</sub></span>, the count feature is the number of group members present in the lowercased text, with prefix matching for inflectional families (<span class="mono">oscillat*</span> matches <em>oscillation, oscillates, oscillating</em>):</p>
+    </div>
+    <div class="eq prose">
+      <div class="eq__body">
+        <span class="v">s<sub>j</sub></span> = <span class="op">Σ</span><sub>w ∈ v<sub>j</sub></sub> <b>1</b>[ w ∈ x̃ ],&nbsp;&nbsp; j = 1, …, 10
+      </div>
+      <span class="eq__n">(4)</span>
+    </div>
+    <div class="prose">
+      <p>Six surface features are appended: word count, mean word length, sentence count, question-mark count, exclamation-mark count, and a binary digit-presence indicator. Crucially, all sixteen are computed on the <strong>full untruncated text</strong>, while the encoder sees at most 96–128 tokens. Global statistics destroyed by truncation cannot be recovered from a partial view — this is the deterministic, lossless side channel the gate consumes.</p>
+    </div>
+
+    <h3>The gate, in three steps</h3>
+    <div class="eq prose">
+      <div class="eq__body">s′ = ReLU(<span class="v">W<sub>s</sub></span> s + <span class="v">b<sub>s</sub></span>),&nbsp;&nbsp; <span class="v">W<sub>s</sub></span> ∈ ℝ<sup>d×16</sup></div>
+      <span class="eq__n">(5)</span>
+    </div>
+    <div class="eq prose">
+      <div class="eq__body">g = σ( <span class="v">W<sub>g</sub></span> [ h̃ ; s′ ] + <span class="v">b<sub>g</sub></span> ),&nbsp;&nbsp; <span class="v">W<sub>g</sub></span> ∈ ℝ<sup>d×2d</sup></div>
+      <span class="eq__n">(6)</span>
+    </div>
+    <div class="eq prose">
+      <div class="eq__body">ĥ = LN( g ⊙ h̃ + (1 − g) ⊙ s′ )</div>
+      <span class="eq__n">(7)</span>
+    </div>
+
+    <div class="grid3">
+      <div class="card">
+        <h4>Sigmoid, not softmax</h4>
+        <p>Sigmoid lets each dimension take any value in (0,1) independently. Softmax would impose a unit budget across dimensions — a competitive constraint that makes no sense for dimension-wise modality fusion.</p>
+      </div>
+      <div class="card">
+        <h4>Per-dimension, not scalar</h4>
+        <p>A scalar gate forces every hidden dimension to use the same modality mix. Too coarse when some dimensions encode lexical surface and others encode semantic content.</p>
+      </div>
+      <div class="card">
+        <h4>LayerNorm after fusion</h4>
+        <p>Re-normalizes the fused vector back to the statistical regime of the unfused encoder output, so downstream layers are not surprised by a mean/variance shift.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     IWN — signature section
+     ============================================================ -->
+<section id="iwn">
+  <div class="wrap">
+    <p class="eyebrow">The central result</p>
+    <h2>Instance-Weighted Normalization</h2>
+    <div class="prose">
+      <p class="lede">Before projection, the feature vector is standardized using statistics from the training partition. On a skewed corpus, those statistics belong almost entirely to the majority class.</p>
+      <p>Under global standardization, the mean is a prior-weighted mixture that collapses onto the majority profile as the skew grows:</p>
+    </div>
+
+    <div class="eq prose">
+      <div class="eq__body">ŝ(x) = ( s(x) − s̄<sub>k</sub> ) / ( σ<sub>k</sub> + ε )</div>
+      <span class="eq__n">(8)</span>
+    </div>
+    <div class="eq prose">
+      <div class="eq__body">s̄<sub>k</sub> = <span class="op">Σ</span><sub>c</sub> π<sub>c</sub> s̄<sub>c,k</sub> &nbsp;→&nbsp; s̄<sub>c<sup>⋆</sup>,k</sub> &nbsp;&nbsp;as&nbsp; π<sub>c<sup>⋆</sup></sub> → 1</div>
+      <span class="eq__n">(9)</span>
+    </div>
+
+    <div class="prose">
+      <p>The gate is then fed a measurement of <em>deviation from the majority profile</em>. Majority instances sit near the origin and look unremarkable; minority instances — the ones that decide macro-F<sub>1</sub> — sit far out and look like outliers. IWN replaces the marginal statistics with an unweighted average over per-class statistics:</p>
+    </div>
+
+    <div class="eq prose">
+      <div class="eq__body">
+        s̄<sup>bal</sup><sub>k</sub> =
+        <span class="frac"><span class="num">1</span><span class="den"><span class="v">n<sub>c,k</sub></span></span></span>
+        <span class="op">Σ</span><sub>c=1..n<sub>c,k</sub></sub> s̄<sub>c,k</sub>,
+        &nbsp;&nbsp;&nbsp;
+        σ<sup>bal</sup><sub>k</sub> =
+        <span class="frac"><span class="num">1</span><span class="den"><span class="v">n<sub>c,k</sub></span></span></span>
+        <span class="op">Σ</span><sub>c=1..n<sub>c,k</sub></sub> σ<sub>c,k</sub>
+      </div>
+      <span class="eq__n">(10)</span>
+    </div>
+    <div class="eq prose">
+      <div class="eq__body">s̃(x) = ( s(x) − s̄<sup>bal</sup><sub>k</sub> ) / ( σ<sup>bal</sup><sub>k</sub> + ε )</div>
+      <span class="eq__n">(11)</span>
+    </div>
+
+    <!-- ---------- signature: the bench ---------- -->
+    <div class="bench">
+      <div class="bench__head">
+        <p class="bench__title">The bench: what class skew does to the gate's input</p>
+        <span class="readout" id="skewOut">π = 0.50</span>
+      </div>
+      <p class="small" style="margin:.6rem 0 0">Schematic illustration of Eq. 9 — <strong>not measured data</strong>. Two class-conditional feature profiles are placed at ∓1 in raw units with unit within-class scale. Drag the slider to increase the majority-class share and watch where the two classes land after standardization.</p>
+
+      <div class="bench__ctrl">
+        <label for="skew">Majority-class share π</label>
+        <input type="range" id="skew" min="50" max="95" value="50" step="1" aria-describedby="skewOut">
+      </div>
+
+      <svg id="benchSvg" viewBox="0 0 700 230" role="img" aria-labelledby="bench-title bench-desc">
+        <title id="bench-title">Standardized class positions under global versus class-balanced statistics</title>
+        <desc id="bench-desc">Under global standardization the majority class drifts toward zero and the minority class drifts outward as skew increases. Under IWN both classes remain at minus one and plus one for all skew values.</desc>
+
+        <line x1="60" y1="200" x2="660" y2="200" stroke="#DAE2E0" stroke-width="1"></line>
+        <g id="axisTicks"></g>
+        <text x="360" y="222" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#63736F">standardized feature position</text>
+
+        <text x="60" y="40" font-family="Bricolage Grotesque" font-size="12" font-weight="700" fill="#0E1C1B">Global standardization (Eq. 8)</text>
+        <line x1="60" y1="62" x2="660" y2="62" stroke="#EEF2F1" stroke-width="14"></line>
+        <line id="gSeg" x1="200" y1="62" x2="520" y2="62" stroke="#C9D4D2" stroke-width="2"></line>
+        <circle id="gMaj" cx="200" cy="62" r="8" fill="#63736F"></circle>
+        <circle id="gMin" cx="520" cy="62" r="8" fill="#A8322C"></circle>
+        <line id="gZero" x1="360" y1="46" x2="360" y2="78" stroke="#0E1C1B" stroke-width="1" stroke-dasharray="2 2"></line>
+
+        <text x="60" y="120" font-family="Bricolage Grotesque" font-size="12" font-weight="700" fill="#0E1C1B">IWN — class-balanced statistics (Eq. 11)</text>
+        <line x1="60" y1="142" x2="660" y2="142" stroke="#EEF2F1" stroke-width="14"></line>
+        <line id="iSeg" x1="200" y1="142" x2="520" y2="142" stroke="#C9D4D2" stroke-width="2"></line>
+        <circle id="iMaj" cx="200" cy="142" r="8" fill="#63736F"></circle>
+        <circle id="iMin" cx="520" cy="142" r="8" fill="#A8322C"></circle>
+        <line x1="360" y1="126" x2="360" y2="158" stroke="#0E1C1B" stroke-width="1" stroke-dasharray="2 2"></line>
+      </svg>
+
+      <div class="legend">
+        <span><i style="background:#63736F"></i>majority class</span>
+        <span><i style="background:#A8322C"></i>minority class</span>
+        <span>dashed line = zero of the gate's input space</span>
+      </div>
+
+      <div class="bench__stats">
+        <div class="stat"><span class="stat__k">Majority position</span><span class="stat__v" id="sMaj">−1.00</span></div>
+        <div class="stat"><span class="stat__k">Minority position</span><span class="stat__v" id="sMin">+1.00</span></div>
+        <div class="stat"><span class="stat__k">Center offset</span><span class="stat__v" id="sOff">0.00</span></div>
+        <div class="stat"><span class="stat__k">Same under IWN</span><span class="stat__v">−1.00 / +1.00</span></div>
+      </div>
+      <p class="small" style="margin:1rem 0 0">At π = 0.903 — the raw 9.3:1 skew of the HumLLM corpus — the majority class sits at −0.19 and the minority at +1.81. That asymmetry is what the gate learns to fuse against.</p>
+    </div>
+
+    <h3>What IWN actually fixes</h3>
+    <div class="prose">
+      <p>Without IWN, the gate's per-class precision and recall on D<sub>4</sub> come apart: LLM recall 0.63 against human recall 0.79. The model is biased toward predicting "human" because standardization has shifted the gate's input distribution toward the majority class. IWN symmetrizes the per-class statistics and both classes converge to ≈ 0.89.</p>
+    </div>
+
+    <figure>
+      <div class="dumb" id="dumb"></div>
+      <div class="legend">
+        <span><i style="background:#63736F"></i>SURGeLLM-FULL-RoBERTa (no IWN)</span>
+        <span><i style="background:#A8322C"></i>SURGeLLM-IWN-RoBERTa</span>
+      </div>
+      <figcaption><b>Figure 2.</b> Per-class precision and recall on D<sub>4</sub> (HumLLM), RoBERTa backbone, before and after IWN. Measured values from Table 5. The largest single movement is LLM recall, +0.26.</figcaption>
+    </figure>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>Parameter-free</h4>
+        <p>No new learnable parameters. Only the normalization constants change.</p>
+      </div>
+      <div class="card">
+        <h4>Test-time class-agnostic</h4>
+        <p>The balanced statistics are computed once from training labels and applied at inference with no class information required.</p>
+      </div>
+      <div class="card">
+        <h4>Free on balanced data</h4>
+        <p>When π<sub>c</sub> = 1/n<sub>c</sub>, the balanced and marginal estimators coincide up to the weighted/unweighted variance difference. IWN is a strict generalization that costs nothing in the balanced regime.</p>
+      </div>
+      <div class="card">
+        <h4>Compositional</h4>
+        <p>Orthogonal to loss-side and sampling-side remedies — focal loss, class-balanced re-weighting, oversampling. We report IWN-only results for clarity.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DATA
+     ============================================================ -->
+<section id="data">
+  <div class="wrap">
+    <p class="eyebrow">Datasets</p>
+    <h2>Four tasks chosen to interfere</h2>
+    <div class="prose">
+      <p>Near-isotropic benchmarks do not expose destructive interference. We study the hard case: a single encoder handling movie-review sentiment, multi-hop retrieval QA, LLM-prompt attribution, and human/LLM authorship — tasks that share a backbone but draw on largely disjoint surface signals. All corpora use stratified 70/15/15 splits, label reindexing, and training-only computation of the normalization statistics.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 1.</b> Corpus statistics after stratified capping. %&nbsp;min. = minority-class percentage in the capped subset.</caption>
+          <thead>
+            <tr><th scope="col">Task</th><th scope="col">ID</th><th scope="col" class="num">n</th><th scope="col" class="num">n<sub>c</sub></th><th scope="col" class="num">% min.</th><th scope="col">Source</th><th scope="col">Raw skew</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Sentiment</td><td class="num">D<sub>1</sub></td><td class="num">7,666</td><td class="num">2</td><td class="num">49.5</td><td>SST-2 (GLUE)</td><td class="num">—</td></tr>
+            <tr><td>Retrieval</td><td class="num">D<sub>2</sub></td><td class="num">2,000</td><td class="num">2</td><td class="num">49.0</td><td>HotPotQA</td><td class="num">—</td></tr>
+            <tr><td>Generation</td><td class="num">D<sub>3</sub></td><td class="num">3,164</td><td class="num">2</td><td class="num">50.0</td><td>LLM-7</td><td class="num">≈ 11.8 : 1</td></tr>
+            <tr><td>Authorship</td><td class="num">D<sub>4</sub></td><td class="num">5,000</td><td class="num">2</td><td class="num">50.0</td><td>HumLLM</td><td class="num">9.3 : 1</td></tr>
+            <tr><td><strong>Total</strong></td><td>—</td><td class="num"><strong>17,830</strong></td><td class="num">—</td><td class="num">—</td><td>—</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 1.</b> D<sub>4</sub> is capped to 50/50, yet IWN still helps: normalization statistics are computed on the full training data, and because <span class="mono">P(s | y)</span> differs in its moments across classes, residual imbalance effects survive the capping.</figcaption>
+    </figure>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>D<sub>1</sub> — SST-2</h4>
+        <p>Binary movie-review sentiment. Standard GLUE training split (67,349), official validation set (872) as our test set, with a stratified 10% internal validation slice; capped at 7,666 for parity. Chosen because it is non-saturated on base-scale encoders (87–94% published accuracy) and exercises the polarity vocabulary the gate can act on.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>2</sub> — HotPotQA</h4>
+        <p>Multi-hop QA. Input is <span class="mono">[Q] q [CTX] c<sub>:300</sub></span>; the binary label collapses the three-tier difficulty annotation (easy → 0, medium/hard → 1). Attribution phrases such as <em>according to</em> and <em>the article reports</em> are rare in questions and frequent in contexts, giving the retrieval group a clean discriminative signal.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>3</sub> — LLM-7</h4>
+        <p>14,877 essays under seven prompt conditions, stratified-capped to 3,164. Probes the <span class="mono">llm_stat</span>, <span class="mono">llm_formal</span>, and <span class="mono">llm_list</span> groups on longer, prompt-structured text.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>4</sub> — HumLLM</h4>
+        <p>5,000 balanced examples sampled from a 788,922-text corpus with 9.3:1 original skew. The hardest task in the suite — base models stay under 0.77 macro-F<sub>1</sub> without IWN — and where IWN yields its largest gain.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SETUP
+     ============================================================ -->
+<section id="setup">
+  <div class="wrap">
+    <p class="eyebrow">Experimental setup</p>
+    <h2>How everything was trained</h2>
+
+    <div class="grid2">
+      <div class="prose">
+        <h3 style="margin-top:0">Backbones</h3>
+        <ul class="tight">
+          <li>DistilBERT-base-uncased (66M)</li>
+          <li>BERT-base-uncased (110M)</li>
+          <li>RoBERTa-base (125M)</li>
+          <li>ALBERT-base-v2 (11M)</li>
+          <li>T5-base (220M), as a text-to-text comparison</li>
+        </ul>
+        <h3>Optimization</h3>
+        <p>AdamW (λ = 0.01, β<sub>1</sub> = 0.9, β<sub>2</sub> = 0.999, ε = 10<sup>−8</sup>), 6% linear warmup then decay, gradients clipped at 1.0. Learning rates: 2×10<sup>−5</sup> for Baseline and SURGeLLM-S, 1.5×10<sup>−5</sup> for SURGeLLM-G/FULL/IWN, 3×10<sup>−4</sup> for T5.</p>
+      </div>
+      <div class="prose">
+        <h3 style="margin-top:0">Hardware and budget</h3>
+        <p>2× NVIDIA T4 (16 GB), FP16 via Accelerate, effective batch size 32 through accumulation. Pre-tokenization caching (chunk size 2,048) gives roughly a 25% speedup. Early stopping with patience 2 on validation macro-F<sub>1</sub>. Full reproduction is about 38 GPU-hours.</p>
+        <h3>Statistics</h3>
+        <p>All results are mean ± SD over seeds {0, 1, 2}. Significance is paired Welch <em>t</em>-tests with Benjamini–Hochberg correction at FDR = 0.05 over 4 × 4 task-variant comparisons, plus 95% bootstrap confidence intervals (B = 2,000). Reported metrics: accuracy, macro-F<sub>1</sub>, precision, recall, ROC-AUC.</p>
+      </div>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 2.</b> Model variants. P = surgical prefix, G = gate, E = extended training, I = IWN.</caption>
+          <thead>
+            <tr><th scope="col">Variant</th><th scope="col">P</th><th scope="col">G</th><th scope="col">E</th><th scope="col">I</th><th scope="col">What it isolates</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td style="text-align:left">Fine-tuned encoder, task heads only</td></tr>
+            <tr><td>T5-base</td><td>—</td><td>—</td><td>—</td><td>—</td><td style="text-align:left">Text-to-text framing of the same suite</td></tr>
+            <tr><td>SURGeLLM-G</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td style="text-align:left">Prefix alone</td></tr>
+            <tr><td>SURGeLLM-S</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td style="text-align:left">Prefix + gate, standard schedule</td></tr>
+            <tr><td>SURGeLLM-FULL</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td><td style="text-align:left">Adds extended training</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td style="text-align:left">Adds class-balanced statistics</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     RESULTS
+     ============================================================ -->
+<section id="results">
+  <div class="wrap">
+    <p class="eyebrow">Main results</p>
+    <h2>Eleven variants, four tasks, three seeds</h2>
+    <div class="prose">
+      <p>D<sub>1</sub> is non-saturated — the F<sub>1</sub> spread across variants is 0.901–0.937 — so aggregate averages reflect genuine differences rather than ceiling effects. SURGeLLM-IWN-RoBERTa is the top model at 0.940 average F<sub>1</sub>, ahead of the strongest non-IWN variant by +0.034 and the RoBERTa baseline by +0.036. The improvement is driven almost entirely by D<sub>4</sub>: +0.130 over baseline, which fully offsets the gate-induced drop seen without IWN.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 3.</b> Macro-F<sub>1</sub>, mean ± SD over three seeds. Bold = best per column. † = early stopping triggered. T(s) = mean wall-clock training time on 2×T4. ∆ = Avg F<sub>1</sub> against Baseline-RoBERTa.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Model</th><th scope="col">Par.</th>
+              <th scope="col" class="num">D<sub>1</sub> SST-2</th>
+              <th scope="col" class="num">D<sub>2</sub> HotPot</th>
+              <th scope="col" class="num">D<sub>3</sub> LLM-7</th>
+              <th scope="col" class="num">D<sub>4</sub> HumLLM</th>
+              <th scope="col" class="num">Avg F<sub>1</sub></th>
+              <th scope="col" class="num">∆</th>
+              <th scope="col" class="num">T(s)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="rowgroup"><td colspan="9">Reference models</td></tr>
+            <tr><td>T5-base</td><td class="num">220M</td><td class="num">0.928 <span class="sd">± .005</span></td><td class="num">0.939 <span class="sd">± .007</span></td><td class="num">0.972 <span class="sd">± .004</span></td><td class="num">0.748 <span class="sd">± .013</span></td><td class="num">0.897</td><td class="num neg">−0.007</td><td class="num">412</td></tr>
+            <tr><td>Baseline-DistilBERT</td><td class="num">66M</td><td class="num">0.901 <span class="sd">± .006</span></td><td class="num">0.940 <span class="sd">± .008</span></td><td class="num">0.955 <span class="sd">± .006</span></td><td class="num">0.749 <span class="sd">± .012</span></td><td class="num">0.886</td><td class="num neg">−0.018</td><td class="num">82</td></tr>
+            <tr><td>Baseline-BERT</td><td class="num">110M</td><td class="num">0.918 <span class="sd">± .004</span></td><td class="num">0.934 <span class="sd">± .007</span></td><td class="num">0.963 <span class="sd">± .005</span></td><td class="num">0.760 <span class="sd">± .011</span></td><td class="num">0.894</td><td class="num neg">−0.010</td><td class="num">227</td></tr>
+            <tr><td>Baseline-RoBERTa</td><td class="num">125M</td><td class="num">0.929 <span class="sd">± .004</span></td><td class="num">0.947 <span class="sd">± .006</span></td><td class="num">0.978 <span class="sd">± .003</span></td><td class="num">0.762 <span class="sd">± .010</span></td><td class="num">0.904</td><td class="num">—</td><td class="num">233</td></tr>
+
+            <tr class="rowgroup"><td colspan="9">SURGeLLM without IWN</td></tr>
+            <tr><td>SURGeLLM-S-DistilBERT</td><td class="num">66M</td><td class="num">0.911 <span class="sd">± .007</span></td><td class="num best">0.961 <span class="sd">± .006</span></td><td class="num">0.925 <span class="sd">± .009</span></td><td class="num">0.681 <span class="sd">± .013</span></td><td class="num">0.870</td><td class="num neg">−0.034</td><td class="num">119</td></tr>
+            <tr><td>SURGeLLM-S-BERT</td><td class="num">110M</td><td class="num">0.926 <span class="sd">± .005</span></td><td class="num">0.939 <span class="sd">± .007</span></td><td class="num">0.965 <span class="sd">± .004</span></td><td class="num">0.748 <span class="sd">± .011</span></td><td class="num">0.894</td><td class="num neg">−0.010</td><td class="num">317</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa †</td><td class="num">125M</td><td class="num best">0.937 <span class="sd">± .004</span></td><td class="num">0.949 <span class="sd">± .005</span></td><td class="num">0.977 <span class="sd">± .003</span></td><td class="num">0.760 <span class="sd">± .010</span></td><td class="num">0.906</td><td class="num pos">+0.002</td><td class="num">327</td></tr>
+            <tr><td>SURGeLLM-FULL-RoBERTa †</td><td class="num">125M</td><td class="num">0.932 <span class="sd">± .005</span></td><td class="num">0.950 <span class="sd">± .006</span></td><td class="num">0.961 <span class="sd">± .005</span></td><td class="num">0.711 <span class="sd">± .012</span></td><td class="num">0.889</td><td class="num neg">−0.015</td><td class="num">326</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT</td><td class="num">11M</td><td class="num">0.918 <span class="sd">± .006</span></td><td class="num best">0.961 <span class="sd">± .005</span></td><td class="num">0.957 <span class="sd">± .005</span></td><td class="num">0.708 <span class="sd">± .013</span></td><td class="num">0.886</td><td class="num neg">−0.018</td><td class="num">317</td></tr>
+
+            <tr class="rowgroup"><td colspan="9">SURGeLLM with IWN</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td class="num">125M</td><td class="num">0.933 <span class="sd">± .004</span></td><td class="num">0.954 <span class="sd">± .005</span></td><td class="num best">0.979 <span class="sd">± .003</span></td><td class="num best">0.892 <span class="sd">± .009</span></td><td class="num best">0.940</td><td class="num pos">+0.036</td><td class="num">332</td></tr>
+            <tr><td>SURGeLLM-IWN-BERT</td><td class="num">110M</td><td class="num">0.927 <span class="sd">± .005</span></td><td class="num">0.946 <span class="sd">± .006</span></td><td class="num">0.968 <span class="sd">± .004</span></td><td class="num">0.866 <span class="sd">± .010</span></td><td class="num">0.927</td><td class="num pos">+0.023</td><td class="num">322</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 3.</b> Retrieval gains are consistent — SURGeLLM-S-DistilBERT and SURGeLLM-FULL-ALBERT both reach 0.961 ± .006 on D<sub>2</sub>, clearly above their baselines. T5-base is competitive at 0.897 but neither dominant nor efficient.</figcaption>
+    </figure>
+
+    <h3>Statistical significance</h3>
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 4.</b> Benjamini–Hochberg-corrected <em>p</em>-values for selected comparisons. Bold = <em>p</em> &lt; 0.05.</caption>
+          <thead><tr><th scope="col">Comparison</th><th scope="col">Task</th><th scope="col" class="num">p (BH)</th></tr></thead>
+          <tbody>
+            <tr><td>SURGeLLM-S-DistilBERT vs. Base-DistilBERT</td><td>D<sub>2</sub></td><td class="num best">0.008</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT vs. Base-RoBERTa</td><td>D<sub>2</sub></td><td class="num best">0.011</td></tr>
+            <tr><td>SURGeLLM-IWN-RoBERTa vs. Base-RoBERTa</td><td>D<sub>2</sub></td><td class="num best">0.024</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa vs. Base-RoBERTa</td><td>D<sub>4</sub></td><td class="num best">&lt; 0.001</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa vs. SURGeLLM-FULL</td><td>D<sub>4</sub></td><td class="num best">&lt; 0.001</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-BERT vs. Base-BERT</td><td>D<sub>4</sub></td><td class="num best">&lt; 0.001</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa vs. Base-RoBERTa</td><td>D<sub>1</sub></td><td class="num">0.063</td></tr>
+            <tr><td>SURGeLLM-S-BERT vs. Base-BERT</td><td>D<sub>1</sub></td><td class="num">0.082</td></tr>
+            <tr><td>All D<sub>1</sub>/D<sub>3</sub> pairs (avg.)</td><td>—</td><td class="num">&gt; 0.05</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 4.</b> The IWN gains on D<sub>4</sub> are the strongest effects in the study. Differences on D<sub>1</sub> and D<sub>3</sub> mostly sit inside seed noise — which is what Proposition 2 predicts: where surgical alignment is moderate, the gate degenerates harmlessly toward a near-identity map.</figcaption>
+    </figure>
+
+    <h3>Why text-to-text does not dominate</h3>
+    <div class="prose">
+      <p>T5-base trains in 412s against 233s for Baseline-RoBERTa (a 1.77× wall-clock penalty), carries 220M parameters against 125M (a 1.76× parameter penalty), and still trails Baseline-RoBERTa by 0.007 avg. F<sub>1</sub> and SURGeLLM-IWN-RoBERTa by 0.043. Text-to-text framing is most powerful when tasks share a unifying linguistic structure; our four tasks are structurally heterogeneous, and T5's encoder-decoder must allocate capacity to a decoding side that classification does not need.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ABLATIONS
+     ============================================================ -->
+<section id="ablations">
+  <div class="wrap">
+    <p class="eyebrow">Ablations</p>
+    <h2>Reading the components apart</h2>
+    <div class="prose">
+      <p>The progression <span class="mono">G → FULL → IWN</span> on RoBERTa tells the cleanest story. The prefix alone is mildly beneficial (+0.002). Adding the gate <em>without</em> IWN is harmful (−0.015 average, dominated by D<sub>4</sub>'s −0.051). Adding IWN reverses the regression and exceeds it (+0.036). The BERT rows show the same pattern.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 5.</b> Component ablation across backbones. ∆ = Avg F<sub>1</sub> against the same-backbone baseline.</caption>
+          <thead>
+            <tr><th scope="col">Model</th><th scope="col">P</th><th scope="col">G</th><th scope="col">E</th><th scope="col">I</th>
+            <th scope="col" class="num">D<sub>1</sub></th><th scope="col" class="num">D<sub>2</sub></th><th scope="col" class="num">D<sub>3</sub></th><th scope="col" class="num">D<sub>4</sub></th><th scope="col" class="num">Avg</th><th scope="col" class="num">∆</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline-RoBERTa</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="num">0.929</td><td class="num">0.947</td><td class="num">0.978</td><td class="num">0.762</td><td class="num">0.904</td><td class="num">—</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td class="num">0.937</td><td class="num">0.949</td><td class="num">0.977</td><td class="num">0.760</td><td class="num">0.906</td><td class="num pos">+.002</td></tr>
+            <tr><td>SURGeLLM-FULL-RoBERTa</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td><td class="num">0.932</td><td class="num">0.950</td><td class="num">0.961</td><td class="num neg">0.711</td><td class="num">0.889</td><td class="num neg">−.015</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td class="num">0.933</td><td class="num">0.954</td><td class="num">0.979</td><td class="num best">0.892</td><td class="num best">0.940</td><td class="num pos">+.036</td></tr>
+            <tr><td>Baseline-BERT</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="num">0.918</td><td class="num">0.934</td><td class="num">0.963</td><td class="num">0.760</td><td class="num">0.894</td><td class="num">—</td></tr>
+            <tr><td>SURGeLLM-S-BERT</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td class="num">0.926</td><td class="num">0.939</td><td class="num">0.965</td><td class="num">0.748</td><td class="num">0.894</td><td class="num">±.000</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-BERT</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td class="num">0.927</td><td class="num">0.946</td><td class="num">0.968</td><td class="num">0.866</td><td class="num">0.927</td><td class="num pos">+.033</td></tr>
+            <tr><td>Baseline-DistilBERT</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="num">0.901</td><td class="num">0.940</td><td class="num">0.955</td><td class="num">0.749</td><td class="num">0.886</td><td class="num">—</td></tr>
+            <tr><td>SURGeLLM-S-DistilBERT</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td class="num">0.911</td><td class="num">0.961</td><td class="num">0.925</td><td class="num neg">0.681</td><td class="num">0.870</td><td class="num neg">−.016</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td><td class="num">0.918</td><td class="num">0.961</td><td class="num">0.957</td><td class="num">0.708</td><td class="num">0.886</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 5.</b> No ALBERT baseline was trained, so the ALBERT row carries no ∆.</figcaption>
+    </figure>
+
+    <h3>Isolating IWN</h3>
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 6.</b> IWN ablation with the D<sub>4</sub> per-class breakdown. F<sub>1</sub> means over three seeds; ∆ is IWN against SURGeLLM-FULL on the same backbone.</caption>
+          <thead>
+            <tr><th scope="col">Variant</th><th scope="col" class="num">D<sub>1</sub></th><th scope="col" class="num">D<sub>2</sub></th><th scope="col" class="num">D<sub>3</sub></th><th scope="col" class="num">D<sub>4</sub></th>
+            <th scope="col" class="num">Hum. P</th><th scope="col" class="num">Hum. R</th><th scope="col" class="num">LLM P</th><th scope="col" class="num">LLM R</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>SURGeLLM-FULL-RoBERTa</td><td class="num">0.932</td><td class="num">0.950</td><td class="num">0.961</td><td class="num">0.711</td><td class="num">0.71</td><td class="num">0.79</td><td class="num">0.71</td><td class="num neg">0.63</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td class="num">0.933</td><td class="num">0.954</td><td class="num">0.979</td><td class="num best">0.892</td><td class="num">0.89</td><td class="num">0.89</td><td class="num">0.89</td><td class="num">0.89</td></tr>
+            <tr><td>∆ (RoBERTa)</td><td class="num pos">+.001</td><td class="num pos">+.004</td><td class="num pos">+.018</td><td class="num pos">+.181</td><td class="num pos">+.18</td><td class="num pos">+.10</td><td class="num pos">+.18</td><td class="num pos">+.26</td></tr>
+            <tr><td>∆ (BERT)</td><td class="num pos">+.001</td><td class="num pos">+.006</td><td class="num pos">+.003</td><td class="num pos">+.118</td><td class="num pos">+.13</td><td class="num pos">+.07</td><td class="num pos">+.14</td><td class="num pos">+.18</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+
+    <h3>Training dynamics</h3>
+    <div class="prose">
+      <p>SURGeLLM models start from a higher initial loss (≈ 1.7–2.1) because the encoder must simultaneously become useful for four heterogeneous tasks and coordinate with the gate and prefix. They converge to comparable validation F<sub>1</sub> within 4–5 epochs. Early stopping fires at epoch 4 for SURGeLLM-FULL-RoBERTa and SURGeLLM-G-RoBERTa, saving roughly one epoch (≈ 325s) with no test-F<sub>1</sub> regression.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 7.</b> Training dynamics, seed-0 representative. ∆Loss = (epoch-1 loss) − (final loss).</caption>
+          <thead><tr><th scope="col">Model</th><th scope="col" class="num">Init. loss</th><th scope="col" class="num">Final loss</th><th scope="col" class="num">Best ep.</th><th scope="col" class="num">∆Loss</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline-DistilBERT</td><td class="num">0.583</td><td class="num">0.179</td><td class="num">3</td><td class="num">0.404</td></tr>
+            <tr><td>Baseline-BERT</td><td class="num">0.508</td><td class="num">0.139</td><td class="num">3</td><td class="num">0.370</td></tr>
+            <tr><td>Baseline-RoBERTa</td><td class="num">0.543</td><td class="num">0.148</td><td class="num">3</td><td class="num">0.395</td></tr>
+            <tr><td>T5-base</td><td class="num">1.234</td><td class="num">0.412</td><td class="num">4</td><td class="num">0.822</td></tr>
+            <tr><td>SURGeLLM-S-DistilBERT</td><td class="num">2.019</td><td class="num">0.736</td><td class="num">4</td><td class="num">1.282</td></tr>
+            <tr><td>SURGeLLM-S-BERT</td><td class="num">1.904</td><td class="num">0.616</td><td class="num">3</td><td class="num">1.087</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa †</td><td class="num">1.708</td><td class="num">0.447</td><td class="num">2</td><td class="num">1.262</td></tr>
+            <tr><td>SURGeLLM-FULL-RoBERTa †</td><td class="num">2.086</td><td class="num">0.682</td><td class="num">2</td><td class="num">1.404</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT</td><td class="num">1.905</td><td class="num">0.510</td><td class="num">4</td><td class="num">1.395</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td class="num">1.812</td><td class="num">0.421</td><td class="num">3</td><td class="num">1.391</td></tr>
+            <tr><td>SURGeLLM-IWN-BERT</td><td class="num">1.847</td><td class="num">0.503</td><td class="num">3</td><td class="num">1.344</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     VOCABULARY
+     ============================================================ -->
+<section id="vocab">
+  <div class="wrap">
+    <p class="eyebrow">Vocabulary sensitivity</p>
+    <h2>Is the curated vocabulary doing the work?</h2>
+    <div class="prose">
+      <p>Four complementary studies on SURGeLLM-G-RoBERTa, all over three seeds. The question behind them: are the gains lexical, or are they the extra parameters the feature channel happens to bring along?</p>
+    </div>
+
+    <div class="grid2">
+      <figure>
+        <div class="table-scroll">
+          <table>
+            <caption><b>Table 8.</b> Sensitivity to the number of indicator groups |V|.</caption>
+            <thead><tr><th scope="col">|V|</th><th scope="col" class="num">D<sub>1</sub></th><th scope="col" class="num">D<sub>2</sub></th><th scope="col" class="num">D<sub>3</sub></th><th scope="col" class="num">D<sub>4</sub></th><th scope="col" class="num">Avg</th></tr></thead>
+            <tbody>
+              <tr><td>0 (none)</td><td class="num">0.929</td><td class="num">0.947</td><td class="num">0.978</td><td class="num">0.762</td><td class="num">0.904</td></tr>
+              <tr><td>5</td><td class="num">0.931</td><td class="num">0.948</td><td class="num">0.977</td><td class="num">0.760</td><td class="num">0.904</td></tr>
+              <tr class="hi"><td>10 (ours)</td><td class="num">0.937</td><td class="num">0.949</td><td class="num">0.977</td><td class="num">0.760</td><td class="num best">0.906</td></tr>
+              <tr><td>15</td><td class="num">0.935</td><td class="num">0.950</td><td class="num">0.976</td><td class="num">0.755</td><td class="num">0.904</td></tr>
+              <tr><td>20</td><td class="num">0.933</td><td class="num">0.949</td><td class="num">0.974</td><td class="num">0.748</td><td class="num">0.901</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption><b>Table 8.</b> Performance plateaus around ten groups. Any value in {10, 15} is statistically indistinguishable, so the system is not sharply tuned to the exact count; twenty groups costs 0.012 on D<sub>4</sub> through noise from redundant thesaurus variants.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="table-scroll">
+          <table>
+            <caption><b>Table 9.</b> Random-vocabulary control and auto-extracted alternative.</caption>
+            <thead><tr><th scope="col">Vocabulary</th><th scope="col" class="num">D<sub>1</sub></th><th scope="col" class="num">D<sub>2</sub></th><th scope="col" class="num">D<sub>3</sub></th><th scope="col" class="num">D<sub>4</sub></th><th scope="col" class="num">Avg</th></tr></thead>
+            <tbody>
+              <tr><td>None (baseline)</td><td class="num">0.929</td><td class="num">0.947</td><td class="num">0.978</td><td class="num">0.762</td><td class="num">0.904</td></tr>
+              <tr><td>Random (BNC)</td><td class="num neg">0.910</td><td class="num neg">0.928</td><td class="num neg">0.946</td><td class="num neg">0.728</td><td class="num neg">0.878</td></tr>
+              <tr><td>Auto-extracted</td><td class="num">0.934</td><td class="num">0.948</td><td class="num">0.974</td><td class="num">0.755</td><td class="num">0.903</td></tr>
+              <tr class="hi"><td>Curated</td><td class="num">0.937</td><td class="num">0.949</td><td class="num">0.977</td><td class="num">0.760</td><td class="num best">0.906</td></tr>
+              <tr><td>∆ Random</td><td class="num neg">−.027</td><td class="num neg">−.021</td><td class="num neg">−.031</td><td class="num neg">−.032</td><td class="num neg">−.028</td></tr>
+              <tr><td>∆ Auto</td><td class="num">−.003</td><td class="num">−.001</td><td class="num">−.003</td><td class="num">−.005</td><td class="num">−.003</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption><b>Table 9.</b> Random vocabulary of the same cardinality is <em>worse than no vocabulary at all</em>. The gate responds to semantic content, not added capacity.</figcaption>
+      </figure>
+    </div>
+
+    <div class="grid2">
+      <figure>
+        <div class="table-scroll">
+          <table>
+            <caption><b>Table 10.</b> Surface-features ablation. G = lexical groups, S = surface statistics.</caption>
+            <thead><tr><th scope="col">Config.</th><th scope="col" class="num">D<sub>1</sub></th><th scope="col" class="num">D<sub>2</sub></th><th scope="col" class="num">D<sub>3</sub></th><th scope="col" class="num">D<sub>4</sub></th><th scope="col" class="num">Avg</th></tr></thead>
+            <tbody>
+              <tr class="hi"><td>G + S (full)</td><td class="num">0.937</td><td class="num">0.949</td><td class="num">0.977</td><td class="num">0.760</td><td class="num best">0.906</td></tr>
+              <tr><td>G only</td><td class="num">0.935</td><td class="num">0.946</td><td class="num">0.974</td><td class="num">0.749</td><td class="num">0.901</td></tr>
+              <tr><td>S only</td><td class="num">0.928</td><td class="num">0.945</td><td class="num">0.974</td><td class="num">0.755</td><td class="num">0.901</td></tr>
+              <tr><td>∆ no-S</td><td class="num">−.002</td><td class="num">−.003</td><td class="num">−.003</td><td class="num neg">−.011</td><td class="num">−.005</td></tr>
+              <tr><td>∆ no-G</td><td class="num neg">−.009</td><td class="num">−.004</td><td class="num">−.003</td><td class="num">−.005</td><td class="num">−.005</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption><b>Table 10.</b> Neither half is redundant. Surface statistics matter most on D<sub>4</sub>, where length and punctuation density separate human from LLM text; lexical groups matter most on D<sub>1</sub>, where polarity vocabulary is decisive.</figcaption>
+      </figure>
+
+      <div class="prose">
+        <h3 style="margin-top:0">Why surface features survive the encoder</h3>
+        <p><strong>Truncation.</strong> The encoder receives at most 96–128 tokens. Total word count and total exclamation count are computed on the full document and carry information unavailable from a partial view.</p>
+        <p><strong>Distributional shift.</strong> Even without truncation, the <span class="mono">[CLS]</span> representation is optimized for masked-token prediction and need not preserve precise count statistics. The surgical channel supplies them deterministically and losslessly.</p>
+      </div>
+    </div>
+
+    <h3>Per-group leave-one-out</h3>
+    <figure>
+      <div class="heat" id="heat" role="img" aria-label="Leave-one-out macro-F1 drop for each of ten indicator groups across four tasks. The dominant group is sst_pos for SST-2, retrieval for HotPot, prompt_cot for LLM-7, and llm_stat for HumLLM."></div>
+      <figcaption><b>Figure 3.</b> Macro-F<sub>1</sub> drop when each indicator group is removed and the model retrained (SURGeLLM-G-RoBERTa). Each task has a clearly dominant group, and cross-task leakage is minimal — removing a task-specific group rarely moves another task by more than 0.002. The leave-one-out pattern matches the design intent, which is what makes the gate interpretable.</figcaption>
+    </figure>
+
+    <h3>Transfer without manual curation</h3>
+    <div class="prose">
+      <p>For a new language or domain: extract candidate indicator words by class-conditional log-odds with an informative Dirichlet prior on each task's training set, rank by absolute log-odds and keep the top K = 50 per class, embed the union with SBERT, then k-means into ten clusters. Cluster membership becomes the indicator groups; surface features are unchanged. This recovers 0.903 against 0.906 for manual curation.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 11.</b> Preliminary multilingual result. SURGeLLM-G-XLM-R-base with auto-extracted per-language vocabularies, 5,000 capped training examples, official test splits, three seeds.</caption>
+          <thead><tr><th scope="col">Configuration</th><th scope="col" class="num">French (AlloCiné)</th><th scope="col" class="num">German</th></tr></thead>
+          <tbody>
+            <tr><td>XLM-R-base baseline</td><td class="num">0.917</td><td class="num">0.872</td></tr>
+            <tr><td>SURGeLLM-G-XLM-R-base (auto)</td><td class="num">0.926</td><td class="num">0.881</td></tr>
+            <tr><td>∆</td><td class="num pos">+.009</td><td class="num pos">+.009</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 11.</b> Both gains land within 0.001 of the English-curated gain on D<sub>1</sub> (+0.008), suggesting the recipe transfers without per-language manual curation. A full-scale multilingual study remains future work.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     EFFICIENCY
+     ============================================================ -->
+<section id="efficiency">
+  <div class="wrap">
+    <p class="eyebrow">Efficiency</p>
+    <h2>What the gate costs</h2>
+    <div class="prose">
+      <p>The gate adds 2d² + d ≈ 1.18M parameters, the feature projection ≈ 12.5K, the task embedding ≈ 3K — about 1.2M total, roughly 1% of RoBERTa-base. Asymptotically the surgical components are Θ(d²) against the encoder's Θ(L·d²), negligible for L ≫ 1. The real cost is wall-clock: about 100s on 2×T4 (233s → 332s), a 43% overhead driven mainly by extended training and prefix tokenization.</p>
+    </div>
+
+    <figure class="chart">
+      <svg id="pareto" viewBox="0 0 760 420" role="img" aria-labelledby="par-title par-desc">
+        <title id="par-title">Speed–accuracy trade-off</title>
+        <desc id="par-desc">Scatter of average macro-F1 against training time in seconds for eleven models. Baseline-DistilBERT is cheapest at 82 seconds and 0.886. SURGeLLM-IWN-RoBERTa is the most accurate at 332 seconds and 0.940. T5-base is dominated at 412 seconds and 0.897.</desc>
+      </svg>
+    </figure>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 12.</b> Speed–accuracy trade-off. F<sub>1</sub>/min = F<sub>1</sub> × 60 / T(s). Eff = F<sub>1</sub> × 10³ / log₁₀ P, with P in millions of parameters. ⋆ = on the Pareto frontier.</caption>
+          <thead><tr><th scope="col">Model</th><th scope="col" class="num">Par.</th><th scope="col" class="num">T(s)</th><th scope="col" class="num">Overhead</th><th scope="col" class="num">Avg F<sub>1</sub></th><th scope="col" class="num">F<sub>1</sub>/min</th><th scope="col" class="num">Eff</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline-DistilBERT ⋆</td><td class="num">66M</td><td class="num">82</td><td class="num">1.0×</td><td class="num">0.886</td><td class="num best">0.648</td><td class="num">487.0</td></tr>
+            <tr><td>SURGeLLM-S-DistilBERT</td><td class="num">66M</td><td class="num">119</td><td class="num">1.5×</td><td class="num">0.870</td><td class="num">0.439</td><td class="num">478.2</td></tr>
+            <tr><td>Baseline-BERT ⋆</td><td class="num">110M</td><td class="num">227</td><td class="num">2.8×</td><td class="num">0.894</td><td class="num">0.236</td><td class="num">437.7</td></tr>
+            <tr><td>Baseline-RoBERTa ⋆</td><td class="num">125M</td><td class="num">233</td><td class="num">2.8×</td><td class="num">0.904</td><td class="num">0.233</td><td class="num">431.1</td></tr>
+            <tr><td>SURGeLLM-S-BERT</td><td class="num">110M</td><td class="num">317</td><td class="num">3.9×</td><td class="num">0.894</td><td class="num">0.169</td><td class="num">437.7</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT</td><td class="num">11M</td><td class="num">317</td><td class="num">3.9×</td><td class="num">0.886</td><td class="num">0.168</td><td class="num best">848.0</td></tr>
+            <tr><td>SURGeLLM-FULL-RoBERTa</td><td class="num">125M</td><td class="num">326</td><td class="num">4.0×</td><td class="num">0.889</td><td class="num">0.164</td><td class="num">423.9</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa ⋆</td><td class="num">125M</td><td class="num">327</td><td class="num">4.0×</td><td class="num">0.906</td><td class="num">0.166</td><td class="num">432.0</td></tr>
+            <tr><td>SURGeLLM-IWN-BERT</td><td class="num">110M</td><td class="num">322</td><td class="num">3.9×</td><td class="num">0.927</td><td class="num">0.173</td><td class="num">453.9</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa ⋆</td><td class="num">125M</td><td class="num">332</td><td class="num">4.0×</td><td class="num best">0.940</td><td class="num">0.170</td><td class="num">448.3</td></tr>
+            <tr><td>T5-base</td><td class="num">220M</td><td class="num">412</td><td class="num">5.0×</td><td class="num">0.897</td><td class="num">0.131</td><td class="num">380.4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 12.</b> SURGeLLM-FULL-ALBERT is the most parameter-efficient configuration, reaching 0.886 avg. F<sub>1</sub> with 11M parameters. T5-base is dominated on both axes.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     THEORY
+     ============================================================ -->
+<section id="theory">
+  <div class="wrap">
+    <p class="eyebrow">Theory</p>
+    <h2>When the gate helps, and why it cannot hurt</h2>
+
+    <div class="callout">
+      <span class="callout__tag">Definition 1 — Surgical feature alignment</span>
+      <p>For task <span class="mono">t<sub>k</sub></span> and input distribution <span class="mono">P<sub>t<sub>k</sub></sub></span>, the alignment <span class="mono">ρ<sub>k</sub></span> is the expected absolute inner product between the projected feature vector and the gradient of the conditional log-likelihood at the fused representation:</p>
+      <div class="eq"><div class="eq__body">ρ<sub>k</sub> = 𝔼<sub>(x,y) ~ P<sub>t<sub>k</sub></sub></sub> [ | ⟨ s′(x), ∇<sub>ĥ</sub> log p(y | ĥ) ⟩ | ]</div><span class="eq__n">(15)</span></div>
+      <p class="small" style="margin-bottom:0">When ρ<sub>k</sub> is high, perturbing ĥ along s′ moves the log-likelihood a lot, so s′ encodes information about y. When ρ<sub>k</sub> = 0, s′ is orthogonal in expectation to the score function and carries no task-relevant signal.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Theorem 1 — Gate approximation bound</span>
+      <p>Let <span class="mono">f<sup>⋆</sup></span> be the Bayes-optimal classifier for task <span class="mono">t<sub>k</sub></span> and <span class="mono">f<sub>θ</sub></span> a SURGeLLM classifier from ERM on <span class="mono">N<sub>k</sub></span> examples. If the encoder is <span class="mono">L<sub>φ</sub></span>-Lipschitz, the head map <span class="mono">L<sub>head</sub></span>-Lipschitz, and the loss ρ-Lipschitz in its first argument, then with probability at least 1 − δ:</p>
+      <div class="eq"><div class="eq__body">
+        R(f<sub>θ</sub>) − R(f<sup>⋆</sup>) ≤
+        <span class="frac"><span class="num">C</span><span class="den">√N<sub>k</sub></span></span>
+        &nbsp;+&nbsp;
+        <span class="frac"><span class="num">λ<sub>max</sub>(W<sub>g</sub><sup>⊤</sup>W<sub>g</sub>)</span><span class="den">2</span></span>
+        ‖ s′ − s<sup>⋆</sup> ‖<sup>2</sup>
+      </div><span class="eq__n">(16)</span></div>
+      <p style="margin-bottom:0">The first term is standard: more data shrinks the generalization gap. The second is the novel piece — small when the projected feature vector is close to its oracle <span class="mono">s<sup>⋆</sup></span>, large when the gate matrix has high spectral norm. Highly aligned tasks benefit more, because s′ then carries useful signal that even a modest <span class="mono">W<sub>s</sub></span> approximates well.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Proposition 2 — Degeneracy under zero alignment</span>
+      <p>If ρ<sub>k</sub> = 0, then at any local minimum of the regularized loss with weight decay λ &gt; 0: ‖W<sub>s</sub>‖ → 0, hence s′(x) → 0, hence g<sub>i</sub><sup>⋆</sup> → 1 for every dimension, and the fusion collapses to ĥ → LN(h̃). The expected gradient vanishes, the update reduces to pure exponential decay <span class="mono">W<sub>s</sub> ← (1 − λη)W<sub>s</sub></span>, and to minimize loss the gate routes all signal through h̃.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Corollary 3 — Safety of adding the gate</span>
+      <p style="margin-bottom:0">For any task with ρ<sub>k</sub> = 0, adding the surgical gate cannot increase the minimum achievable empirical risk. The gate either strictly improves (ρ<sub>k</sub> &gt; 0) or degenerates to identity (ρ<sub>k</sub> = 0).</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <span class="callout__tag">Empirical caveat — the imbalance loophole</span>
+      <p>Corollary 3 assumes ρ<sub>k</sub> accurately captures gradient-feature alignment <em>under the distribution the gate actually sees</em>. Under severe class skew, Eq. 8 feeds the gate prior-contaminated features, and the effective ρ<sub>k</sub> measured on that contaminated distribution can be misleadingly low even when the underlying feature signal is informative.</p>
+      <p style="margin-bottom:0">This is precisely the failure mode observed on D<sub>4</sub> without IWN — and it is why the safety guarantee did not save us. IWN restores the conditions of Proposition 2 on imbalanced data.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 13.</b> Monte-Carlo estimates of ρ<sub>k</sub> on the validation split, 1,000 examples per task, by backpropagating to obtain ∇<sub>ĥ</sub> log p(y | ĥ).</caption>
+          <thead><tr><th scope="col">Task</th><th scope="col" class="num">ρ<sub>k</sub> (no IWN)</th><th scope="col" class="num">ρ<sub>k</sub> (IWN)</th><th scope="col" class="num">∆F<sub>1</sub> from IWN</th></tr></thead>
+          <tbody>
+            <tr><td>D<sub>1</sub> SST-2</td><td class="num">1.42</td><td class="num">1.39</td><td class="num">+.001</td></tr>
+            <tr><td>D<sub>2</sub> HotPot</td><td class="num">3.71</td><td class="num">3.68</td><td class="num">+.004</td></tr>
+            <tr><td>D<sub>3</sub> LLM-7</td><td class="num">1.83</td><td class="num">1.85</td><td class="num">+.018</td></tr>
+            <tr class="hi"><td>D<sub>4</sub> HumLLM</td><td class="num neg">0.61</td><td class="num best">2.13</td><td class="num pos">+.181</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 13.</b> The empirical gain ordering tracks the alignment ordering. D<sub>4</sub> is the only task whose alignment <em>changes</em> under IWN — from 0.61 to 2.13 — because it is the only task whose gate input was prior-contaminated. Alignment on the other three tasks is stable to within measurement noise, exactly as a normalization-only change should behave.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     FAILURES + LIMITATIONS
+     ============================================================ -->
+<section id="limits">
+  <div class="wrap">
+    <p class="eyebrow">Failure analysis and limitations</p>
+    <h2>Where this breaks</h2>
+    <div class="prose">
+      <p>We manually inspected 50 misclassified examples per task on SURGeLLM-IWN-RoBERTa. The failures are diagnostic — they mark the boundary of the gate's utility rather than random error.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>D<sub>1</sub> — SST-2</h4>
+        <p>Negation scope (<em>not bad</em>), sarcasm, and mixed-sentiment reviews. The gate cannot help: polarity vocabulary fires on both sides of the decision.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>2</sub> — HotPotQA</h4>
+        <p>Questions with implicit multi-hop chains and no explicit attribution cues. The retrieval group has nothing to fire on.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>3</sub> — LLM-7</h4>
+        <p>Human essays that mimic LLM scaffolding in a formal academic register, and LLM essays edited by humans to strip enumerative markers.</p>
+      </div>
+      <div class="card">
+        <h4>D<sub>4</sub> — HumLLM</h4>
+        <p>After IWN, the residual failures concentrate on short texts (&lt; 30 words), where surgical-feature counts are unreliable. This motivates length-conditional gating.</p>
+      </div>
+    </div>
+
+    <h3>Stated limitations</h3>
+    <div class="prose">
+      <ul class="tight">
+        <li>Experiments are English-only; the multilingual result in Table 11 is preliminary and small-scale.</li>
+        <li>Coverage is base-scale encoders, 11M–220M parameters. Extension to LLaMA-class encoders is explicit future work, and we expect absolute gains to shrink as encoder capacity saturates ρ<sub>k</sub> — though the do-no-harm guarantee holds at all scales.</li>
+        <li>The bound is standard Rademacher complexity and may be loose for modern transformers. PAC-Bayes or NTK tightening is open.</li>
+        <li>Evaluation is four heterogeneous tasks by design, not the full GLUE/SuperGLUE suite. That is the point of the study, but it does limit external comparability.</li>
+        <li>IWN is reported alone, without composition against focal loss, class-balanced re-weighting, or oversampling. Whether the gains are additive is untested.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     REVISION HISTORY
+     ============================================================ -->
+<section id="revision">
+  <div class="wrap">
+    <p class="eyebrow">Revision record</p>
+    <h2>What changed after review</h2>
+    <div class="prose">
+      <p>This version responds to four reviewer reports and a meta-review. We publish the crosswalk because the most interesting result in the paper — IWN — exists only because reviewers refused to accept it as future work.</p>
+    </div>
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 14.</b> Reviewer-to-revision crosswalk. ✓ = fully addressed; ∼ = partially addressed with a future-work note.</caption>
+          <thead><tr><th scope="col">Raised by</th><th scope="col">Concern</th><th scope="col">Change</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            <tr class="hi">
+              <td>Qs1u, EVkC, Meta</td>
+              <td style="text-align:left;white-space:normal">Class imbalance on D<sub>4</sub> corrupts gate statistics; IWN was deferred to future work</td>
+              <td style="text-align:left;white-space:normal">IWN fully implemented and evaluated</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>Qs1u, idHo</td>
+              <td style="text-align:left;white-space:normal">No sensitivity analysis of the surgical vocabulary; unclear why exactly ten groups; surface features may be redundant</td>
+              <td style="text-align:left;white-space:normal">Four-part sensitivity study added, including a random-vocabulary control</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>4Pvq, idHo, Meta</td>
+              <td style="text-align:left;white-space:normal">The original D<sub>1</sub> (synthetic physics oscillation) saturated at F<sub>1</sub> = 1.000 and inflated reported averages</td>
+              <td style="text-align:left;white-space:normal">D<sub>1</sub> replaced with SST-2; all aggregates recomputed</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>idHo</td>
+              <td style="text-align:left;white-space:normal">No comparison to unified text-to-text models</td>
+              <td style="text-align:left;white-space:normal">T5-base added as an eleventh variant</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>Qs1u, 4Pvq</td>
+              <td style="text-align:left;white-space:normal">Single-seed results weaken confidence in small F<sub>1</sub> differences</td>
+              <td style="text-align:left;white-space:normal">All results re-run over seeds {0,1,2}; mean ± SD throughout, per-seed breakdown published</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>Qs1u</td>
+              <td style="text-align:left;white-space:normal">Abstract overclaimed "state-of-the-art performance"</td>
+              <td style="text-align:left;white-space:normal">Revised to "competitive parameter-efficient multi-task performance" with the bootstrap CI overlap stated explicitly</td><td>✓</td>
+            </tr>
+            <tr>
+              <td>idHo</td>
+              <td style="text-align:left;white-space:normal">No multilingual or cross-domain evaluation</td>
+              <td style="text-align:left;white-space:normal">Preliminary French/German experiment added; full study deferred</td><td>∼</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 14.</b> Removing the saturated D<sub>1</sub> narrowed bootstrap CI widths from ≈ 0.17 to ≈ 0.12 and turned a within-CI gap of ∆ = 0.001 into a separation of ∆ = +0.036 (<em>p</em> &lt; 0.001). The headline comparison is now SURGeLLM-IWN-RoBERTa 0.940 ± .003, 95% CI [0.934, 0.946], against Baseline-RoBERTa 0.904 ± .003.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     REPRODUCIBILITY
+     ============================================================ -->
+<section id="repro">
+  <div class="wrap">
+    <p class="eyebrow">Reproducibility</p>
+    <h2>Everything you need to re-run this</h2>
+
+    <div class="grid2">
+      <div class="prose">
+        <ul class="checklist">
+          <li><strong>Code</strong> — released with preprocessing scripts that reproduce the stratified splits.</li>
+          <li><strong>Data</strong> — all four corpora are publicly available.</li>
+          <li><strong>Seeds</strong> — {0, 1, 2}; splits, weight initialization, dropout masks, and CUDA determinism are all seeded.</li>
+          <li><strong>Software</strong> — PyTorch 2.1, Transformers 4.35, Accelerate 0.24, scikit-learn 1.3, sentence-transformers 2.2.</li>
+          <li><strong>Hardware</strong> — 2× NVIDIA T4 (16 GB), FP16 mixed precision.</li>
+          <li><strong>Statistics</strong> — bootstrap B = 2,000 (seed 0); paired Welch <em>t</em>-tests with BH FDR = 0.05.</li>
+          <li><strong>Compute</strong> — ≈ 38 GPU-hours on T4 to reproduce all main and ablation results.</li>
+        </ul>
+      </div>
+      <div>
+        <figure style="margin-top:0">
+          <div class="table-scroll">
+            <table>
+              <caption><b>Table 15.</b> Per-seed average F<sub>1</sub> for selected models.</caption>
+              <thead><tr><th scope="col">Model</th><th scope="col" class="num">Seed 0</th><th scope="col" class="num">Seed 1</th><th scope="col" class="num">Seed 2</th><th scope="col" class="num">Mean</th></tr></thead>
+              <tbody>
+                <tr><td>Baseline-RoBERTa</td><td class="num">0.906</td><td class="num">0.901</td><td class="num">0.905</td><td class="num">0.904</td></tr>
+                <tr><td>SURGeLLM-G-RoBERTa</td><td class="num">0.908</td><td class="num">0.902</td><td class="num">0.908</td><td class="num">0.906</td></tr>
+                <tr><td>SURGeLLM-FULL-RoBERTa</td><td class="num">0.892</td><td class="num">0.886</td><td class="num">0.889</td><td class="num">0.889</td></tr>
+                <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td class="num">0.943</td><td class="num">0.937</td><td class="num">0.940</td><td class="num best">0.940</td></tr>
+                <tr><td>SURGeLLM-IWN-BERT</td><td class="num">0.929</td><td class="num">0.924</td><td class="num">0.928</td><td class="num">0.927</td></tr>
+                <tr><td>T5-base</td><td class="num">0.900</td><td class="num">0.893</td><td class="num">0.898</td><td class="num">0.897</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      </div>
+    </div>
+
+    <h3>Hyperparameters</h3>
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 16.</b> Full configuration. LR = learning rate, EP = max epochs, BS = per-GPU batch size, GA = gradient accumulation, MaxL = max sequence length, WU = warmup fraction.</caption>
+          <thead><tr><th scope="col">Model</th><th scope="col" class="num">LR</th><th scope="col" class="num">EP</th><th scope="col" class="num">BS</th><th scope="col" class="num">GA</th><th scope="col" class="num">MaxL</th><th scope="col" class="num">WU</th></tr></thead>
+          <tbody>
+            <tr><td>Baseline-DistilBERT</td><td class="num">2×10⁻⁵</td><td class="num">3</td><td class="num">32</td><td class="num">1</td><td class="num">96</td><td class="num">0.06</td></tr>
+            <tr><td>Baseline-BERT</td><td class="num">2×10⁻⁵</td><td class="num">3</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>Baseline-RoBERTa</td><td class="num">2×10⁻⁵</td><td class="num">3</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>T5-base</td><td class="num">3×10⁻⁴</td><td class="num">5</td><td class="num">8</td><td class="num">4</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-S-DistilBERT</td><td class="num">2×10⁻⁵</td><td class="num">4</td><td class="num">32</td><td class="num">1</td><td class="num">96</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-S-BERT</td><td class="num">2×10⁻⁵</td><td class="num">4</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-G-RoBERTa</td><td class="num">1.5×10⁻⁵</td><td class="num">4</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-FULL-RoBERTa</td><td class="num">1.5×10⁻⁵</td><td class="num">5</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-FULL-ALBERT</td><td class="num">2×10⁻⁵</td><td class="num">5</td><td class="num">32</td><td class="num">1</td><td class="num">96</td><td class="num">0.06</td></tr>
+            <tr class="hi"><td>SURGeLLM-IWN-RoBERTa</td><td class="num">1.5×10⁻⁵</td><td class="num">5</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+            <tr><td>SURGeLLM-IWN-BERT</td><td class="num">2×10⁻⁵</td><td class="num">5</td><td class="num">16</td><td class="num">2</td><td class="num">128</td><td class="num">0.06</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+
+    <h3>The surgical vocabulary</h3>
+    <div class="prose">
+      <p>Ten case-insensitive indicator groups; <span class="mono">*</span> marks prefix matching for inflectional families.</p>
+    </div>
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 17.</b> Complete indicator groups, plus the six appended surface features.</caption>
+          <thead><tr><th scope="col">Group</th><th scope="col">Members</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">sst_pos</td><td style="text-align:left;white-space:normal">great, excellent, brilliant, terrific, wonderful, masterpiece, captivat*, impressive, delightful, superb</td></tr>
+            <tr><td class="mono">sst_neg</td><td style="text-align:left;white-space:normal">terrible, awful, dreadful, unwatchable, boring, dull, mediocre, disappoint*, worst, painful</td></tr>
+            <tr><td class="mono">llm_stat</td><td style="text-align:left;white-space:normal">empirically, statistically, demonstrated, observed, evidenced, indicate*, suggest*, results show, data show</td></tr>
+            <tr><td class="mono">llm_formal</td><td style="text-align:left;white-space:normal">moreover, furthermore, additionally, consequently, therefore, in conclusion, in summary, to summarize</td></tr>
+            <tr><td class="mono">llm_list</td><td style="text-align:left;white-space:normal">firstly, secondly, thirdly, finally, in addition, on the other hand, (1), (2), (3)</td></tr>
+            <tr><td class="mono">human_pers</td><td style="text-align:left;white-space:normal">i, my, we, our, personally, i think, i believe, i feel</td></tr>
+            <tr><td class="mono">human_hedge</td><td style="text-align:left;white-space:normal">maybe, perhaps, possibly, kind of, sort of, i guess, probably, somewhat, arguably</td></tr>
+            <tr><td class="mono">human_emo</td><td style="text-align:left;white-space:normal">love, hate, amazing, awesome, terrible, awful, fantastic, horrible, sad, happy</td></tr>
+            <tr><td class="mono">retrieval</td><td style="text-align:left;white-space:normal">according to, as stated in, the article reports, the text states, multi-hop, supporting context, in the passage</td></tr>
+            <tr><td class="mono">prompt_cot</td><td style="text-align:left;white-space:normal">step by step, let us think, first, then, next, reasoning, the chain of thought, walk through</td></tr>
+            <tr class="rowgroup"><td colspan="2">Surface features (s₁₁ – s₁₆)</td></tr>
+            <tr><td class="mono">s₁₁ – s₁₆</td><td style="text-align:left;white-space:normal">word count · mean word length · sentence count (split on <span class="mono">.!?</span>) · question-mark count · exclamation-mark count · binary digit presence</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<!-- ============================================================
+     CITE
+     ============================================================ -->
+<section id="cite">
+  <div class="wrap">
+    <p class="eyebrow">Citation</p>
+    <h2>Cite this work</h2>
+    <div class="bib" style="max-width: 860px">
+      <button class="copy" id="copyBtn" type="button">Copy BibTeX</button>
+      <pre id="bibtex">@misc{mohammad2026surgellm,
+  <span class="k">title</span>         = {SURGeLLM: Rethinking Multi-Task Evaluation through Task-Aware
+                   Feature Gating with Class-Balanced Normalization},
+  <span class="k">author</span>        = {Mohammad, Noor Islam S. and Bayaz{\i}t, Ulu{\u{g}}},
+  <span class="k">year</span>          = {2026},
+  <span class="k">eprint</span>        = {2606.24259},
+  <span class="k">archivePrefix</span> = {arXiv},
+  <span class="k">primaryClass</span>  = {cs.CL},
+  <span class="k">url</span>           = {https://arxiv.org/abs/2606.24259}
+}</pre>
+    </div>
+    <p class="small" style="margin-top:1rem">Replace with the venue entry once the camera-ready is assigned.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p style="margin:0 0 .3rem"><strong style="color:#fff;font-family:var(--display)">SURGeLLM</strong></p>
+      <p style="margin:0">Noor Islam S. Mohammad · Uluğ Bayazıt<br>Department of Computer Science, Istanbul Technical University</p>
+    </div>
+    <div>
+      <p style="margin:0"><a href="#top">Back to top</a> · <a href="https://arxiv.org/abs/2606.24259">arXiv:2606.24259</a> · <a href="#cite">BibTeX</a></p>
+      <p style="margin:.4rem 0 0">Page content mirrors the manuscript. Where the two disagree, the manuscript is authoritative.</p>
+    </div>
+  </div>
+</footer>
+
+<!--
+  ============================================================
+  BEFORE PUBLISHING — placeholders to replace
+  ============================================================
+  1. hero: href="surgellm.pdf"        -> upload the PDF next to index.html
+  2. hero: Code button   href="#"     -> repository URL
+  3. hero: Slides button href="#"     -> Beamer slide deck (PDF)
+  4. hero: Poster button href="#"     -> A0 / NAACL-style poster (PDF)
+  5. author name links   href="#"     -> personal / scholar pages
+  6. add og:image and favicon
+  7. LLM-7 and HumLLM references are marked "author-check required"
+     in the manuscript; resolve canonical URL/DOI before publishing.
+  See AUDIT.md for the numerical consistency review.
+  ============================================================
+-->
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- feature strip: s ∈ R^16 ---------- */
+  var FEATURES = [
+    ["sst_pos","lex"],["sst_neg","lex"],["llm_stat","lex"],["llm_formal","lex"],
+    ["llm_list","lex"],["human_pers","lex"],["human_hedge","lex"],["human_emo","lex"],
+    ["retrieval","lex"],["prompt_cot","lex"],
+    ["s11 word count","surf"],["s12 mean word len","surf"],["s13 sentence count","surf"],
+    ["s14 question marks","surf"],["s15 exclamations","surf"],["s16 has digit","surf"]
+  ];
+  var strip = document.getElementById("strip");
+  if (strip){
+    FEATURES.forEach(function(f, i){
+      var d = document.createElement("span");
+      d.className = "cell " + f[1];
+      d.setAttribute("data-name", (i+1) + " · " + f[0]);
+      d.setAttribute("tabindex","0");
+      d.setAttribute("role","img");
+      d.setAttribute("aria-label","Feature " + (i+1) + ": " + f[0]);
+      strip.appendChild(d);
+    });
+  }
+
+  /* ---------- scrollspy ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".navlinks a"));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute("href")); }).filter(Boolean);
+  if ("IntersectionObserver" in window && targets.length){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        links.forEach(function(a){
+          a.setAttribute("aria-current", a.getAttribute("href") === "#" + e.target.id ? "true" : "false");
+        });
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    targets.forEach(function(t){ io.observe(t); });
+  }
+
+  /* ---------- copy bibtex ---------- */
+  var btn = document.getElementById("copyBtn");
+  if (btn){
+    btn.addEventListener("click", function(){
+      var txt = document.getElementById("bibtex").innerText;
+      var done = function(){ btn.textContent = "Copied"; setTimeout(function(){ btn.textContent = "Copy BibTeX"; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done, function(){ btn.textContent = "Select manually"; });
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); done(); } catch(e){ btn.textContent = "Select manually"; }
+        document.body.removeChild(ta);
+      }
+    });
+  }
+
+  /* ---------- IWN bench ----------
+     Schematic: class profiles at -1 and +1, unit within-class scale.
+     Global standardization subtracts the prior-weighted mean
+     m = pi*(-1) + (1-pi)*(+1) = 1 - 2*pi.
+     IWN subtracts the unweighted mean, which is 0 by construction. */
+  var X0 = 60, X1 = 660, LO = -2.6, HI = 2.6;
+  function px(v){ return X0 + (v - LO) / (HI - LO) * (X1 - X0); }
+
+  var ticks = document.getElementById("axisTicks");
+  if (ticks){
+    [-2,-1,0,1,2].forEach(function(t){
+      var g = document.createElementNS("http://www.w3.org/2000/svg","g");
+      var l = document.createElementNS("http://www.w3.org/2000/svg","line");
+      l.setAttribute("x1", px(t)); l.setAttribute("x2", px(t));
+      l.setAttribute("y1", 196); l.setAttribute("y2", 204);
+      l.setAttribute("stroke", "#63736F");
+      var tx = document.createElementNS("http://www.w3.org/2000/svg","text");
+      tx.setAttribute("x", px(t)); tx.setAttribute("y", 190);
+      tx.setAttribute("text-anchor","middle");
+      tx.setAttribute("font-family","IBM Plex Mono"); tx.setAttribute("font-size","10");
+      tx.setAttribute("fill","#63736F");
+      tx.textContent = (t > 0 ? "+" : "") + t;
+      g.appendChild(l); g.appendChild(tx); ticks.appendChild(g);
+    });
+  }
+
+  var slider = document.getElementById("skew");
+  var els = {
+    out: document.getElementById("skewOut"),
+    gMaj: document.getElementById("gMaj"), gMin: document.getElementById("gMin"),
+    gSeg: document.getElementById("gSeg"), iSeg: document.getElementById("iSeg"),
+    iMaj: document.getElementById("iMaj"), iMin: document.getElementById("iMin"),
+    sMaj: document.getElementById("sMaj"), sMin: document.getElementById("sMin"),
+    sOff: document.getElementById("sOff")
+  };
+  function fmt(v){ return (v < 0 ? "\u2212" : "+") + Math.abs(v).toFixed(2); }
+  function renderBench(){
+    if (!slider) return;
+    var pi = parseInt(slider.value, 10) / 100;
+    var m = 1 - 2 * pi;              // prior-weighted mean
+    var maj = -1 - m, min = 1 - m;   // positions after global standardization
+    els.out.textContent = "\u03C0 = " + pi.toFixed(2);
+    els.gMaj.setAttribute("cx", px(maj));
+    els.gMin.setAttribute("cx", px(min));
+    els.gSeg.setAttribute("x1", px(maj));
+    els.gSeg.setAttribute("x2", px(min));
+    els.iMaj.setAttribute("cx", px(-1));
+    els.iMin.setAttribute("cx", px(1));
+    els.iSeg.setAttribute("x1", px(-1));
+    els.iSeg.setAttribute("x2", px(1));
+    els.sMaj.textContent = fmt(maj);
+    els.sMin.textContent = fmt(min);
+    els.sOff.textContent = fmt((maj + min) / 2);
+  }
+  if (slider){ slider.addEventListener("input", renderBench); renderBench(); }
+
+  /* ---------- D4 per-class dumbbell (measured, Table 6) ---------- */
+  var DUMB = [
+    ["Human P", 0.71, 0.89],
+    ["Human R", 0.79, 0.89],
+    ["LLM P",   0.71, 0.89],
+    ["LLM R",   0.63, 0.89]
+  ];
+  var dumb = document.getElementById("dumb");
+  if (dumb){
+    var lo = 0.55, hi = 1.0;
+    var pos = function(v){ return ((v - lo) / (hi - lo) * 100).toFixed(2) + "%"; };
+    DUMB.forEach(function(r){
+      var row = document.createElement("div");
+      row.className = "dumb__row";
+      row.innerHTML =
+        '<span class="dumb__k">' + r[0] + '</span>' +
+        '<span class="dumb__track">' +
+          '<span class="dumb__seg" style="left:' + pos(r[1]) + ';width:' + (((r[2]-r[1])/(hi-lo))*100).toFixed(2) + '%"></span>' +
+          '<span class="dumb__a" style="left:' + pos(r[1]) + '" title="no IWN: ' + r[1].toFixed(2) + '"></span>' +
+          '<span class="dumb__b" style="left:' + pos(r[2]) + '" title="IWN: ' + r[2].toFixed(2) + '"></span>' +
+        '</span>';
+      row.setAttribute("aria-label", r[0] + ": " + r[1].toFixed(2) + " without IWN, " + r[2].toFixed(2) + " with IWN");
+      dumb.appendChild(row);
+    });
+    var ax = document.createElement("div");
+    ax.className = "dumb__axis";
+    ax.innerHTML = '<span></span><span class="dumb__ticks"><span>0.55</span><span>0.70</span><span>0.85</span><span>1.00</span></span>';
+    dumb.appendChild(ax);
+  }
+
+  /* ---------- leave-one-out heatmap (Table: per-group LOO) ---------- */
+  var GROUPS = ["sst_pos","sst_neg","llm_stat","llm_formal","llm_list","human_pers","human_hedge","human_emo","retrieval","prompt_cot"];
+  var LOO = [
+    ["D1 SST-2",    [-0.014,-0.011,-0.001,-0.001,-0.001,-0.001,-0.001,-0.002,-0.000,-0.000]],
+    ["D2 HotPot",   [-0.000,-0.001,-0.002,-0.001,-0.001,-0.001,-0.000,-0.000,-0.011,-0.001]],
+    ["D3 LLM-7",    [-0.001,-0.001,-0.005,-0.004,-0.003,-0.003,-0.002,-0.002,-0.001,-0.006]],
+    ["D4 HumLLM",   [-0.001,-0.001,-0.018,-0.012,-0.008,-0.014,-0.006,-0.010,-0.001,-0.002]]
+  ];
+  var heat = document.getElementById("heat");
+  if (heat){
+    var g = document.createElement("div");
+    g.className = "heat__grid";
+    g.appendChild(document.createElement("span"));
+    GROUPS.forEach(function(name){
+      var h = document.createElement("span");
+      h.className = "heat__h"; h.textContent = name;
+      g.appendChild(h);
+    });
+    LOO.forEach(function(row){
+      var lab = document.createElement("span");
+      lab.className = "heat__r"; lab.textContent = row[0];
+      g.appendChild(lab);
+      row[1].forEach(function(v, i){
+        var c = document.createElement("span");
+        var t = Math.min(Math.abs(v) / 0.018, 1);
+        c.className = "heat__c" + (t > 0.62 ? " dark" : "");
+        c.style.background = "rgba(168,50,44," + (0.06 + t * 0.94).toFixed(3) + ")";
+        c.textContent = v === 0 ? "0.000" : v.toFixed(3);
+        c.title = row[0] + " · remove " + GROUPS[i] + " → " + v.toFixed(3) + " macro-F1";
+        g.appendChild(c);
+      });
+    });
+    heat.appendChild(g);
+  }
+
+  /* ---------- Pareto scatter (Table 12) ---------- */
+  var MODELS = [
+    ["Baseline-DistilBERT", 82, 0.886, true,  "below"],
+    ["SLLM-S-DistilBERT",  119, 0.870, false, "below"],
+    ["Baseline-BERT",      227, 0.894, true,  "below"],
+    ["Baseline-RoBERTa",   233, 0.904, true,  "above"],
+    ["SLLM-S-BERT",        317, 0.894, false, "below"],
+    ["SLLM-FULL-ALBERT",   317, 0.886, false, "below"],
+    ["SLLM-FULL-RoBERTa",  326, 0.889, false, "above"],
+    ["SLLM-G-RoBERTa",     327, 0.906, true,  "above"],
+    ["SLLM-IWN-BERT",      322, 0.927, false, "below"],
+    ["SLLM-IWN-RoBERTa",   332, 0.940, true,  "above"],
+    ["T5-base",            412, 0.897, false, "above"]
+  ];
+  var svg = document.getElementById("pareto");
+  if (svg){
+    var NS = "http://www.w3.org/2000/svg";
+    var L = 62, R = 730, T = 26, B = 366;
+    var xmin = 50, xmax = 440, ymin = 0.855, ymax = 0.955;
+    var X = function(v){ return L + (v - xmin) / (xmax - xmin) * (R - L); };
+    var Y = function(v){ return B - (v - ymin) / (ymax - ymin) * (B - T); };
+    var el = function(n, attrs, text){
+      var e = document.createElementNS(NS, n);
+      for (var k in attrs) e.setAttribute(k, attrs[k]);
+      if (text !== undefined) e.textContent = text;
+      svg.appendChild(e);
+      return e;
+    };
+    [0.86,0.88,0.90,0.92,0.94].forEach(function(v){
+      el("line",{x1:L,x2:R,y1:Y(v),y2:Y(v),stroke:"#EEF2F1","stroke-width":1});
+      el("text",{x:L-10,y:Y(v)+4,"text-anchor":"end","font-family":"IBM Plex Mono","font-size":"10",fill:"#63736F"}, v.toFixed(2));
+    });
+    [100,200,300,400].forEach(function(v){
+      el("line",{x1:X(v),x2:X(v),y1:T,y2:B,stroke:"#F5F8F7","stroke-width":1});
+      el("text",{x:X(v),y:B+18,"text-anchor":"middle","font-family":"IBM Plex Mono","font-size":"10",fill:"#63736F"}, v);
+    });
+    el("line",{x1:L,x2:R,y1:B,y2:B,stroke:"#DAE2E0","stroke-width":1});
+    el("text",{x:(L+R)/2,y:B+38,"text-anchor":"middle","font-family":"Bricolage Grotesque","font-size":"11",fill:"#63736F"},"training time on 2×T4 (s)");
+    el("text",{x:14,y:(T+B)/2,"text-anchor":"middle","font-family":"Bricolage Grotesque","font-size":"11",fill:"#63736F",transform:"rotate(-90 14 " + ((T+B)/2) + ")"},"average macro-F1");
+
+    // frontier path through the starred points, ordered by time
+    var front = MODELS.filter(function(m){ return m[3]; }).sort(function(a,b){ return a[1]-b[1]; });
+    var d = front.map(function(m,i){ return (i?"L":"M") + X(m[1]) + "," + Y(m[2]); }).join(" ");
+    el("path",{d:d,fill:"none",stroke:"#17514E","stroke-width":1.2,"stroke-dasharray":"4 3",opacity:".55"});
+
+    MODELS.forEach(function(m){
+      var star = m[3], best = m[0] === "SLLM-IWN-RoBERTa";
+      el("circle",{cx:X(m[1]),cy:Y(m[2]),r: best?7:(star?5.5:4.5),
+        fill: best ? "#A8322C" : (star ? "#17514E" : "#FFFFFF"),
+        stroke: best ? "#A8322C" : "#17514E","stroke-width":1.4});
+      el("text",{x:X(m[1]) + 9, y: Y(m[2]) + (m[4]==="above" ? -8 : 15),
+        "font-family":"IBM Plex Mono","font-size":"9.5",
+        fill: best ? "#A8322C" : "#63736F","text-anchor":"start"}, m[0]);
+    });
+    el("text",{x:R,y:T+2,"text-anchor":"end","font-family":"Bricolage Grotesque","font-size":"10",fill:"#63736F"},"filled = Pareto frontier");
+  }
+})();
+</script>
+</body>
+</html>
