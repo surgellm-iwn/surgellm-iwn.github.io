@@ -9,6 +9,50 @@
 <meta property="og:title" content="SURGeLLM — Task-Aware Feature Gating with Class-Balanced Normalization">
 <meta property="og:description" content="The gate was architecturally sound. The statistics it was fed were not. +0.130 macro-F1 on authorship detection.">
 <meta property="og:type" content="article">
+<meta property="og:url" content="https://surgellm-iwn.github.io/">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="canonical" href="https://surgellm-iwn.github.io/">
+<link rel="alternate" type="text/html" href="https://aclanthology.org/2026.trustnlp-main.47/" title="ACL Anthology">
+
+<!-- Google Scholar / Zotero indexing -->
+<meta name="citation_title" content="SURGeLLM: Rethinking Multi-Task Evaluation through Task-Aware Feature Gating with Class-Balanced Normalization">
+<meta name="citation_author" content="Mohammad, Noor Islam S.">
+<meta name="citation_author_institution" content="Department of Computer Science, Istanbul Technical University">
+<meta name="citation_author" content="Bayaz&#305;t, Ulu&#287;">
+<meta name="citation_author_institution" content="Department of Computer Science, Istanbul Technical University">
+<meta name="citation_publication_date" content="2026/07/04">
+<meta name="citation_conference_title" content="Proceedings of the 6th Workshop on Trustworthy NLP (TrustNLP 2026)">
+<meta name="citation_publisher" content="Association for Computational Linguistics">
+<meta name="citation_firstpage" content="600">
+<meta name="citation_lastpage" content="617">
+<meta name="citation_doi" content="10.18653/v1/2026.trustnlp-main.47">
+<meta name="citation_arxiv_id" content="2606.24259">
+<meta name="citation_abstract_html_url" content="https://aclanthology.org/2026.trustnlp-main.47/">
+<meta name="citation_pdf_url" content="https://aclanthology.org/2026.trustnlp-main.47.pdf">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ScholarlyArticle",
+  "name": "SURGeLLM: Rethinking Multi-Task Evaluation through Task-Aware Feature Gating with Class-Balanced Normalization",
+  "author": [
+    {"@type": "Person", "name": "Noor Islam S. Mohammad",
+     "affiliation": {"@type": "Organization", "name": "Istanbul Technical University"}},
+    {"@type": "Person", "name": "Ulu\u011f Bayaz\u0131t",
+     "affiliation": {"@type": "Organization", "name": "Istanbul Technical University"}}
+  ],
+  "datePublished": "2026-07-04",
+  "isPartOf": "Proceedings of the 6th Workshop on Trustworthy NLP (TrustNLP 2026)",
+  "publisher": {"@type": "Organization", "name": "Association for Computational Linguistics"},
+  "pagination": "600-617",
+  "identifier": ["doi:10.18653/v1/2026.trustnlp-main.47", "arXiv:2606.24259"],
+  "sameAs": ["https://aclanthology.org/2026.trustnlp-main.47/", "https://arxiv.org/abs/2606.24259"],
+  "codeRepository": "https://github.com/surgellm-iwn/surgellm-iwn",
+  "url": "https://surgellm-iwn.github.io/",
+  "license": "https://creativecommons.org/licenses/by/4.0/"
+}
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -406,11 +450,13 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
       <a href="#method">Method</a>
       <a href="#iwn">IWN</a>
       <a href="#data">Data</a>
+      <a href="#algorithm">Algorithm</a>
       <a href="#results">Results</a>
       <a href="#ablations">Ablations</a>
       <a href="#theory">Theory</a>
       <a href="#limits">Limitations</a>
       <a href="#repro">Reproducibility</a>
+      <a href="#code">Code</a>
       <a href="#cite">Cite</a>
     </nav>
   </div>
@@ -423,13 +469,13 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
      ============================================================ -->
 <section class="hero" id="top">
   <div class="wrap">
-    <p class="eyebrow">Istanbul Technical University · arXiv:2606.24259 · June 2026</p>
+    <p class="eyebrow">TrustNLP 2026 · ACL Anthology, pages 600–617 · <a href="https://arxiv.org/abs/2606.24259" style="color:inherit">arXiv:2606.24259</a></p>
     <h1>SURGe<span class="lc">LLM</span></h1>
     <p class="subtitle">Rethinking multi-task evaluation through task-aware feature gating with class-balanced normalization</p>
 
     <p class="authors">
-      <a href="#">Noor Islam S. Mohammad</a><sup>1</sup> &nbsp;·&nbsp;
-      <a href="#">Uluğ Bayazıt</a><sup>2</sup>
+      <a href="https://aclanthology.org/people/noor-islam-s-mohammad/">Noor Islam S. Mohammad</a><sup>1</sup> &nbsp;·&nbsp;
+      <a href="https://aclanthology.org/people/ulug-bayazit/">Uluğ Bayazıt</a><sup>2</sup>
       <span class="aff">Department of Computer Science, Istanbul Technical University · <span class="mono">{islam23, ulugbayazit}@itu.edu.tr</span> &nbsp;<sup>1</sup>Corresponding author &nbsp;<sup>2</sup>Supervising author</span>
     </p>
 
@@ -457,11 +503,11 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     </div>
 
     <div class="btns">
-      <a class="btn btn--solid" href="surgellm.pdf">Paper (PDF) <span class="tbd">add file</span></a>
-      <a class="btn" href="https://arxiv.org/abs/2606.24259">arXiv</a>
-      <a class="btn" href="#">Code <span class="tbd">add URL</span></a>
-      <a class="btn" href="#">Slides <span class="tbd">add URL</span></a>
-      <a class="btn" href="#">Poster <span class="tbd">add URL</span></a>
+      <a class="btn btn--solid" href="https://aclanthology.org/2026.trustnlp-main.47.pdf">Paper (PDF)</a>
+      <a class="btn" href="https://aclanthology.org/2026.trustnlp-main.47/">ACL Anthology</a>
+      <a class="btn" href="https://arxiv.org/abs/2606.24259">arXiv:2606.24259</a>
+      <a class="btn" href="https://github.com/surgellm-iwn/surgellm-iwn">Code &amp; data</a>
+      <a class="btn" href="https://doi.org/10.18653/v1/2026.trustnlp-main.47">DOI</a>
       <a class="btn" href="#cite">BibTeX</a>
     </div>
 
@@ -741,7 +787,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
         <span><i style="background:#63736F"></i>SURGeLLM-FULL-RoBERTa (no IWN)</span>
         <span><i style="background:#A8322C"></i>SURGeLLM-IWN-RoBERTa</span>
       </div>
-      <figcaption><b>Figure 2.</b> Per-class precision and recall on D<sub>4</sub> (HumLLM), RoBERTa backbone, before and after IWN. Measured values from Table 5. The largest single movement is LLM recall, +0.26.</figcaption>
+      <figcaption><b>Figure 2.</b> Per-class precision and recall on D<sub>4</sub> (HumLLM), RoBERTa backbone, before and after IWN. Measured values from Table 6. The largest single movement is LLM recall, +0.26.</figcaption>
     </figure>
 
     <div class="grid2">
@@ -863,6 +909,77 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
         </table>
       </div>
     </figure>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     ALGORITHM
+     ============================================================ -->
+<section id="algorithm">
+  <div class="wrap">
+    <p class="eyebrow">Training procedure</p>
+    <h2>Algorithm 1, line by line</h2>
+    <div class="prose">
+      <p>Two steps carry more weight than their length suggests. <strong>Lines 2–7</strong> are the whole of IWN: a branch that computes either marginal or class-balanced moments, using training labels once and never again. <strong>Line 15</strong> is where the branch takes effect, and it happens <em>before</em> the prefix is built on line 16, so each example's prefix is consistent with the gate input it will be fused against.</p>
+      <p>Everything else is conventional: DDP with FP16 through Accelerate, gradient accumulation to an effective batch of 32, clipping at 1.0, and early stopping on validation macro-F<sub>1</sub> with patience 2.</p>
+    </div>
+
+    <figure>
+      <pre style="max-height:none"><span class="k">Require:</span> corpus D; model config cfg; accelerator A; flag IWN ∈ {0,1}
+<span class="k">Ensure:</span>  trained model f_θ
+
+ 1: <span class="k">Split:</span> for each task t_k, stratify D_k into D_k^tr, D_k^v, D_k^te   (70/15/15)
+ 2: <span class="k">if</span> IWN <span class="k">then</span>
+ 3:     compute per-class (s̄_c,k, σ_c,k) on D_k^tr
+ 4:     form class-balanced (s̄_k^bal, σ_k^bal)                          ▷ Eq. 10
+ 5: <span class="k">else</span>
+ 6:     compute marginal (s̄_k, σ_k) on D_k^tr                           ▷ Eq. 8
+ 7: <span class="k">end if</span>
+ 8: <span class="k">Pre-tokenize:</span> cache train/val texts as tensors (chunk C = 2,048)
+ 9: construct f_θ (§3.4–3.7); optimizer AdamW; scheduler γ
+10: f_θ, Adam, γ, DL^tr, DL^v ← A.prepare(…)                        ▷ DDP + FP16
+11: F₁⋆ ← −∞;  p ← 0;  θ⋆ ← θ
+12: <span class="k">for</span> e = 1, …, E_max <span class="k">do</span>
+13:     f_θ.train()
+14:     <span class="k">for</span> each mini-batch B = {(x_i, y_i, t_i)} <span class="k">do</span>
+15:         compute s(x_i) on the untruncated text; standardize   ▷ Eq. 4, then 8 or 11
+16:         build prefix x′_i                                          ▷ Eq. 12
+17:         ŷ_i, ℓ_i ← f_θ(x′_i, t_i, s(x_i), y_i)                      ▷ Eq. 1
+18:         A.backward(ℓ_i / τ)                            ▷ τ = accumulation steps
+19:         <span class="k">if</span> step ≡ 0 (mod τ) <span class="k">then</span>
+20:             A.clip_grad_norm(1.0)
+21:             Adam.step();  γ.step();  Adam.zero_grad()
+22:         <span class="k">end if</span>
+23:     <span class="k">end for</span>
+24:     F₁^e ← QuickVal(f_θ, DL^v, A)
+25:     <span class="k">if</span> F₁^e &gt; F₁⋆ <span class="k">then</span>
+26:         F₁⋆ ← F₁^e;  θ⋆ ← A.unwrap(f_θ).θ;  p ← 0
+27:     <span class="k">else</span>
+28:         p ← p + 1
+29:         <span class="k">if</span> p ≥ P <span class="k">then break</span>                               ▷ patience P = 2
+30:         <span class="k">end if</span>
+31:     <span class="k">end if</span>
+32: <span class="k">end for</span>
+33: f_θ ← θ⋆;  evaluate on D_k^te
+34: <span class="k">return</span> f_θ</pre>
+      <figcaption><b>Algorithm 1.</b> SURGeLLM multi-GPU training with optional IWN. Line 3 is the only place class labels touch the normalization path; after line 4 the statistics are two constant vectors, which is what makes IWN parameter-free and test-time class-agnostic.</figcaption>
+    </figure>
+
+    <div class="grid3">
+      <div class="card">
+        <h4>Why standardize before the prefix</h4>
+        <p>Line 16 quantizes <span class="mono">v<sub>j</sub> = ⌊s<sub>j</sub>⌋</span> from the <em>raw</em> counts, keeping the prefix human-readable, while the gate consumes the standardized vector from line 15. Mixing the two would make the prefix corpus-dependent and uninterpretable.</p>
+      </div>
+      <div class="card">
+        <h4>Per-task batch sampling</h4>
+        <p>With <span class="mono">w<sub>k</sub> = 1</span> in Eq. 1, balance comes from the sampler rather than the loss: each mini-batch draws from a single task and task turns are shuffled per epoch, so no task dominates a gradient window.</p>
+      </div>
+      <div class="card">
+        <h4>Caching</h4>
+        <p>Line 8 caches tokenized tensors in chunks of 2,048, worth roughly a 25% speedup. The cache key must include prefix presence — the same corpus tokenizes differently with and without it.</p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1108,15 +1225,46 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
       <figcaption><b>Figure 3.</b> Macro-F<sub>1</sub> drop when each indicator group is removed and the model retrained (SURGeLLM-G-RoBERTa). Each task has a clearly dominant group, and cross-task leakage is minimal — removing a task-specific group rarely moves another task by more than 0.002. The leave-one-out pattern matches the design intent, which is what makes the gate interpretable.</figcaption>
     </figure>
 
+
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 11.</b> Leave-one-out macro-F<sub>1</sub> drop per indicator group (SURGeLLM-G-RoBERTa). Each row is a full retrain with that group removed. Bold = the dominant group for that task.</caption>
+          <thead><tr><th scope="col">Group removed</th><th scope="col" class="num">D<sub>1</sub> SST-2</th><th scope="col" class="num">D<sub>2</sub> HotPot</th><th scope="col" class="num">D<sub>3</sub> LLM-7</th><th scope="col" class="num">D<sub>4</sub> HumLLM</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">sst_pos</td><td class="num neg"><b>−.014</b></td><td class="num">−.000</td><td class="num">−.001</td><td class="num">−.001</td></tr>
+            <tr><td class="mono">sst_neg</td><td class="num neg">−.011</td><td class="num">−.001</td><td class="num">−.001</td><td class="num">−.001</td></tr>
+            <tr><td class="mono">llm_stat</td><td class="num">−.001</td><td class="num">−.002</td><td class="num">−.005</td><td class="num neg"><b>−.018</b></td></tr>
+            <tr><td class="mono">llm_formal</td><td class="num">−.001</td><td class="num">−.001</td><td class="num">−.004</td><td class="num neg">−.012</td></tr>
+            <tr><td class="mono">llm_list</td><td class="num">−.001</td><td class="num">−.001</td><td class="num">−.003</td><td class="num">−.008</td></tr>
+            <tr><td class="mono">human_pers</td><td class="num">−.001</td><td class="num">−.001</td><td class="num">−.003</td><td class="num neg">−.014</td></tr>
+            <tr><td class="mono">human_hedge</td><td class="num">−.001</td><td class="num">−.000</td><td class="num">−.002</td><td class="num">−.006</td></tr>
+            <tr><td class="mono">human_emo</td><td class="num">−.002</td><td class="num">−.000</td><td class="num">−.002</td><td class="num">−.010</td></tr>
+            <tr><td class="mono">retrieval</td><td class="num">−.000</td><td class="num neg"><b>−.011</b></td><td class="num">−.001</td><td class="num">−.001</td></tr>
+            <tr><td class="mono">prompt_cot</td><td class="num">−.000</td><td class="num">−.001</td><td class="num neg"><b>−.006</b></td><td class="num">−.002</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <figcaption><b>Table 11.</b> The dominant group per task is sentiment polarity for D<sub>1</sub>, retrieval for D<sub>2</sub>, prompt-CoT for D<sub>3</sub>, and LLM-style / human-style for D<sub>4</sub>. Off-diagonal entries rarely exceed 0.002, so removing a task-specific group leaves the other tasks essentially untouched — the groups are doing the work the vocabulary design intended, which is what makes this gate interpretable rather than merely effective.</figcaption>
+    </figure>
+
     <h3>Transfer without manual curation</h3>
     <div class="prose">
-      <p>For a new language or domain: extract candidate indicator words by class-conditional log-odds with an informative Dirichlet prior on each task's training set, rank by absolute log-odds and keep the top K = 50 per class, embed the union with SBERT, then k-means into ten clusters. Cluster membership becomes the indicator groups; surface features are unchanged. This recovers 0.903 against 0.906 for manual curation.</p>
+      <p>Manual curation is a convenience, not a requirement. For a new language or domain, the vocabulary can be derived automatically in five steps:</p>
+      <ol class="tight">
+        <li>For each task <span class="mono">t<sub>k</sub></span> and class <span class="mono">c</span>, compute the log-odds ratio with an informative Dirichlet prior on word frequencies (Monroe et al., 2008). The ranking statistic is the <em>z</em>-score <span class="mono">δ<sub>i</sub><sup>c</sup> / √var(δ<sub>i</sub><sup>c</sup>)</span>, not the raw log-odds, which is what keeps rare words from dominating.</li>
+        <li>Rank by absolute log-odds; retain the top <span class="mono">K = 50</span> per class.</li>
+        <li>Embed the union of retained words with SBERT.</li>
+        <li>Run <em>k</em>-means with <span class="mono">k = 10</span> on the embedding matrix.</li>
+        <li>Use cluster membership as the derived indicator groups. Surface features are unchanged.</li>
+      </ol>
+      <p>This recovers 0.903 average F<sub>1</sub> against 0.906 for manual curation — a 0.3% relative gap, and well inside the gap to the random control (0.878). The step that matters is the first: it is what separates a class-discriminative vocabulary from a merely frequent one, and it is why the random-BNC control in Table 9 lands <em>below</em> the no-vocabulary baseline rather than merely level with it.</p>
     </div>
 
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 11.</b> Preliminary multilingual result. SURGeLLM-G-XLM-R-base with auto-extracted per-language vocabularies, 5,000 capped training examples, official test splits, three seeds.</caption>
+          <caption><b>Table 12.</b> Preliminary multilingual result. SURGeLLM-G-XLM-R-base with auto-extracted per-language vocabularies, 5,000 capped training examples, official test splits, three seeds.</caption>
           <thead><tr><th scope="col">Configuration</th><th scope="col" class="num">French (AlloCiné)</th><th scope="col" class="num">German</th></tr></thead>
           <tbody>
             <tr><td>XLM-R-base baseline</td><td class="num">0.917</td><td class="num">0.872</td></tr>
@@ -1125,7 +1273,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
           </tbody>
         </table>
       </div>
-      <figcaption><b>Table 11.</b> Both gains land within 0.001 of the English-curated gain on D<sub>1</sub> (+0.008), suggesting the recipe transfers without per-language manual curation. A full-scale multilingual study remains future work.</figcaption>
+      <figcaption><b>Table 12.</b> Both gains land within 0.001 of the English-curated gain on D<sub>1</sub> (+0.008), suggesting the recipe transfers without per-language manual curation. A full-scale multilingual study remains future work.</figcaption>
     </figure>
   </div>
 </section>
@@ -1141,6 +1289,22 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
       <p>The gate adds 2d² + d ≈ 1.18M parameters, the feature projection ≈ 12.5K, the task embedding ≈ 3K — about 1.2M total, roughly 1% of RoBERTa-base. Asymptotically the surgical components are Θ(d²) against the encoder's Θ(L·d²), negligible for L ≫ 1. The real cost is wall-clock: about 100s on 2×T4 (233s → 332s), a 43% overhead driven mainly by extended training and prefix tokenization.</p>
     </div>
 
+
+    <div class="grid3">
+      <div class="card">
+        <h4>Per-example forward cost</h4>
+        <p>Encoder <span class="mono">Θ(L · d²)</span> for an <span class="mono">L</span>-layer transformer. Surgical components add <span class="mono">Θ(16d)</span> for the projection, <span class="mono">Θ(d · 2d) = Θ(d²)</span> for the gate, and <span class="mono">Θ(d²/2)</span> per head — total overhead <span class="mono">Θ(d²)</span>, negligible against the encoder for <span class="mono">L ≫ 1</span>.</p>
+      </div>
+      <div class="card">
+        <h4>Memory</h4>
+        <p>Gate <span class="mono">2d² + d = 2·768² + 768 ≈ 1.18M</span>; feature projection <span class="mono">16d + d ≈ 12.5K</span>; task embedding <span class="mono">|T| · d ≈ 3K</span>. About <strong>1.2M parameters</strong> per backbone, ≈ 1% of RoBERTa-base.</p>
+      </div>
+      <div class="card">
+        <h4>Where the wall-clock goes</h4>
+        <p>233s → 332s on 2×T4 for the same five-epoch budget, a 43% overhead. It is driven by extended training and prefix tokenization — the prefix lengthens every sequence — not by the gate arithmetic, which is a rounding error.</p>
+      </div>
+    </div>
+
     <figure class="chart">
       <svg id="pareto" viewBox="0 0 760 420" role="img" aria-labelledby="par-title par-desc">
         <title id="par-title">Speed–accuracy trade-off</title>
@@ -1151,7 +1315,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 12.</b> Speed–accuracy trade-off. F<sub>1</sub>/min = F<sub>1</sub> × 60 / T(s). Eff = F<sub>1</sub> × 10³ / log₁₀ P, with P in millions of parameters. ⋆ = on the Pareto frontier.</caption>
+          <caption><b>Table 13.</b> Speed–accuracy trade-off. F<sub>1</sub>/min = F<sub>1</sub> × 60 / T(s). Eff = F<sub>1</sub> × 10³ / log₁₀ P, with P in millions of parameters. ⋆ = on the Pareto frontier.</caption>
           <thead><tr><th scope="col">Model</th><th scope="col" class="num">Par.</th><th scope="col" class="num">T(s)</th><th scope="col" class="num">Overhead</th><th scope="col" class="num">Avg F<sub>1</sub></th><th scope="col" class="num">F<sub>1</sub>/min</th><th scope="col" class="num">Eff</th></tr></thead>
           <tbody>
             <tr><td>Baseline-DistilBERT ⋆</td><td class="num">66M</td><td class="num">82</td><td class="num">1.0×</td><td class="num">0.886</td><td class="num best">0.648</td><td class="num">487.0</td></tr>
@@ -1168,7 +1332,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
           </tbody>
         </table>
       </div>
-      <figcaption><b>Table 12.</b> SURGeLLM-FULL-ALBERT is the most parameter-efficient configuration, reaching 0.886 avg. F<sub>1</sub> with 11M parameters. T5-base is dominated on both axes.</figcaption>
+      <figcaption><b>Table 13.</b> SURGeLLM-FULL-ALBERT is the most parameter-efficient configuration, reaching 0.886 avg. F<sub>1</sub> with 11M parameters. T5-base is dominated on both axes.</figcaption>
     </figure>
   </div>
 </section>
@@ -1217,10 +1381,50 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
       <p style="margin-bottom:0">This is precisely the failure mode observed on D<sub>4</sub> without IWN — and it is why the safety guarantee did not save us. IWN restores the conditions of Proposition 2 on imbalanced data.</p>
     </div>
 
+
+    <h3>The proof chain</h3>
+    <div class="prose">
+      <p>Theorem 1 is assembled from three pieces: a Lipschitz composition lemma, a Rademacher generalization bound, and a propagation of the feature-approximation error through the bilinear gate. All three are stated here so the constants can be checked rather than taken on trust.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Lemma 4 — Lipschitz composition</span>
+      <p>The composed map <span class="mono">h<sub>θ</sub> : x ↦ ŷ = f<sub>θ</sub>(x, t<sub>k</sub>)</span> is Lipschitz with constant <span class="mono">L<sub>θ</sub> ≤ L<sub>φ</sub> · L<sub>G</sub> · L<sub>head</sub></span>, where <span class="mono">L<sub>G</sub></span> is the Lipschitz constant of the gate (Eqs. 6–7) and <span class="mono">L<sub>head</sub></span> that of the classification head.</p>
+      <p class="small" style="margin-bottom:0">The chain is immediate: ‖ŷ − ŷ′‖ ≤ L<sub>head</sub>‖ĥ − ĥ′‖ ≤ L<sub>head</sub>L<sub>G</sub>‖h̃ − h̃′‖ ≤ L<sub>head</sub>L<sub>G</sub>L<sub>φ</sub>‖x − x′‖.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Proof of Theorem 1 — generalization term</span>
+      <p>Let <span class="mono">F</span> be the hypothesis class of SURGeLLM classifiers parameterized by θ. By Talagrand's contraction lemma and Lemma 4, the empirical Rademacher complexity is bounded by</p>
+      <div class="eq"><div class="eq__body">ℜ̂<sub>N</sub>(F) ≤ <span class="frac"><span class="num">L<sub>θ</sub> · rad(X)</span><span class="den">√N<sub>k</sub></span></span></div><span class="eq__n">(17)</span></div>
+      <p>with <span class="mono">rad(X)</span> the radius of the input space. Standard Rademacher bounds then give, with probability ≥ 1 − δ,</p>
+      <div class="eq"><div class="eq__body">R(f<sub>θ</sub>) − R̂(f<sub>θ</sub>) ≤ 2ℜ̂<sub>N</sub>(F) + O(√(log(1/δ) / N<sub>k</sub>)) ≤ <span class="frac"><span class="num">C</span><span class="den">√N<sub>k</sub></span></span></div><span class="eq__n">(18)</span></div>
+      <p style="margin-bottom:0">which is the first term of Eq. 16, with <span class="mono">C = O(L<sub>φ</sub> L<sub>head</sub> ρ √log(1/δ))</span>.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Proof of Theorem 1 — approximation term</span>
+      <p>The projection <span class="mono">s′ = ReLU(W<sub>s</sub>s + b<sub>s</sub>)</span> incurs an error against the oracle <span class="mono">s<sup>⋆</sup></span> that minimizes prediction loss. Propagating it through the bilinear gate of Eq. 6 and using <span class="mono">sup<sub>z</sub> σ′(z) = 1/4</span>:</p>
+      <div class="eq"><div class="eq__body">‖g − g<sup>⋆</sup>‖ ≤ ‖σ′‖<sub>∞</sub> · ‖W<sub>g</sub>[:, d:]‖ · ‖s′ − s<sup>⋆</sup>‖ ≤ ¼ λ<sub>max</sub>(W<sub>g</sub><sup>⊤</sup>W<sub>g</sub>)<sup>1/2</sup> ‖s′ − s<sup>⋆</sup>‖</div></div>
+      <p style="margin-bottom:0">Propagating through the fusion of Eq. 7 and cross-entropy yields the quadratic term of Eq. 16. The bound is therefore driven by two things a practitioner controls: how well <span class="mono">W<sub>s</sub></span> is trained, and how large the gate matrix is allowed to grow.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">Proof of Proposition 2</span>
+      <p>When <span class="mono">ρ<sub>k</sub> = 0</span>, Definition 1 gives a vanishing expected gradient with respect to the feature projection:</p>
+      <div class="eq"><div class="eq__body">𝔼[∇<sub>W<sub>s</sub></sub>L] = 𝔼[∇<sub>s′</sub>L] · s<sup>⊤</sup> = <b>0</b></div><span class="eq__n">(19)</span></div>
+      <p style="margin-bottom:0">Under SGD with weight decay λ &gt; 0 the update reduces to pure exponential decay <span class="mono">W<sub>s</sub> ← (1 − λη)W<sub>s</sub></span>, so <span class="mono">‖W<sub>s</sub>‖ → 0</span>, hence <span class="mono">s′ = ReLU(W<sub>s</sub>s + b<sub>s</sub>) → ReLU(b<sub>s</sub>) → 0</span> for small initial biases. The gate input degenerates to <span class="mono">[h̃ ; 0]</span> and the fused representation carries no surgical-feature signal.</p>
+    </div>
+
+    <h3>Estimating ρ<sub>k</sub></h3>
+    <div class="prose">
+      <p>The alignment is estimated by Monte Carlo on the validation split, 1,000 examples per task. For each example we backpropagate to obtain <span class="mono">∇<sub>ĥ</sub> log p(y | ĥ)</span> and take the absolute inner product with <span class="mono">s′(x)</span>. Because <span class="mono">ρ<sub>k</sub></span> is linear in <span class="mono">‖s′‖</span>, it is a scale-dependent quantity: comparisons are meaningful <em>across tasks within one model</em> and <em>across normalization schemes for one task</em>, which is exactly how Table 13 uses it, but not across models with differently scaled <span class="mono">W<sub>s</sub></span>.</p>
+    </div>
+
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 13.</b> Monte-Carlo estimates of ρ<sub>k</sub> on the validation split, 1,000 examples per task, by backpropagating to obtain ∇<sub>ĥ</sub> log p(y | ĥ).</caption>
+          <caption><b>Table 14.</b> Monte-Carlo estimates of ρ<sub>k</sub> on the validation split, 1,000 examples per task, by backpropagating to obtain ∇<sub>ĥ</sub> log p(y | ĥ).</caption>
           <thead><tr><th scope="col">Task</th><th scope="col" class="num">ρ<sub>k</sub> (no IWN)</th><th scope="col" class="num">ρ<sub>k</sub> (IWN)</th><th scope="col" class="num">∆F<sub>1</sub> from IWN</th></tr></thead>
           <tbody>
             <tr><td>D<sub>1</sub> SST-2</td><td class="num">1.42</td><td class="num">1.39</td><td class="num">+.001</td></tr>
@@ -1230,7 +1434,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
           </tbody>
         </table>
       </div>
-      <figcaption><b>Table 13.</b> The empirical gain ordering tracks the alignment ordering. D<sub>4</sub> is the only task whose alignment <em>changes</em> under IWN — from 0.61 to 2.13 — because it is the only task whose gate input was prior-contaminated. Alignment on the other three tasks is stable to within measurement noise, exactly as a normalization-only change should behave.</figcaption>
+      <figcaption><b>Table 14.</b> The empirical gain ordering tracks the alignment ordering. D<sub>4</sub> is the only task whose alignment <em>changes</em> under IWN — from 0.61 to 2.13 — because it is the only task whose gate input was prior-contaminated. Alignment on the other three tasks is stable to within measurement noise, exactly as a normalization-only change should behave.</figcaption>
     </figure>
   </div>
 </section>
@@ -1268,7 +1472,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     <h3>Stated limitations</h3>
     <div class="prose">
       <ul class="tight">
-        <li>Experiments are English-only; the multilingual result in Table 11 is preliminary and small-scale.</li>
+        <li>Experiments are English-only; the multilingual result in Table 12 is preliminary and small-scale.</li>
         <li>Coverage is base-scale encoders, 11M–220M parameters. Extension to LLaMA-class encoders is explicit future work, and we expect absolute gains to shrink as encoder capacity saturates ρ<sub>k</sub> — though the do-no-harm guarantee holds at all scales.</li>
         <li>The bound is standard Rademacher complexity and may be loose for modern transformers. PAC-Bayes or NTK tightening is open.</li>
         <li>Evaluation is four heterogeneous tasks by design, not the full GLUE/SuperGLUE suite. That is the point of the study, but it does limit external comparability.</li>
@@ -1292,7 +1496,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 14.</b> Reviewer-to-revision crosswalk. ✓ = fully addressed; ∼ = partially addressed with a future-work note.</caption>
+          <caption><b>Table 15.</b> Reviewer-to-revision crosswalk. ✓ = fully addressed; ∼ = partially addressed with a future-work note.</caption>
           <thead><tr><th scope="col">Raised by</th><th scope="col">Concern</th><th scope="col">Change</th><th scope="col">Status</th></tr></thead>
           <tbody>
             <tr class="hi">
@@ -1333,7 +1537,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
           </tbody>
         </table>
       </div>
-      <figcaption><b>Table 14.</b> Removing the saturated D<sub>1</sub> narrowed bootstrap CI widths from ≈ 0.17 to ≈ 0.12 and turned a within-CI gap of ∆ = 0.001 into a separation of ∆ = +0.036 (<em>p</em> &lt; 0.001). The headline comparison is now SURGeLLM-IWN-RoBERTa 0.940 ± .003, 95% CI [0.934, 0.946], against Baseline-RoBERTa 0.904 ± .003.</figcaption>
+      <figcaption><b>Table 15.</b> Removing the saturated D<sub>1</sub> narrowed bootstrap CI widths from ≈ 0.17 to ≈ 0.12 and turned a within-CI gap of ∆ = 0.001 into a separation of ∆ = +0.036 (<em>p</em> &lt; 0.001). The headline comparison is now SURGeLLM-IWN-RoBERTa 0.940 ± .003, 95% CI [0.934, 0.946], against Baseline-RoBERTa 0.904 ± .003.</figcaption>
     </figure>
   </div>
 </section>
@@ -1362,7 +1566,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
         <figure style="margin-top:0">
           <div class="table-scroll">
             <table>
-              <caption><b>Table 15.</b> Per-seed average F<sub>1</sub> for selected models.</caption>
+              <caption><b>Table 16.</b> Per-seed average F<sub>1</sub> for selected models.</caption>
               <thead><tr><th scope="col">Model</th><th scope="col" class="num">Seed 0</th><th scope="col" class="num">Seed 1</th><th scope="col" class="num">Seed 2</th><th scope="col" class="num">Mean</th></tr></thead>
               <tbody>
                 <tr><td>Baseline-RoBERTa</td><td class="num">0.906</td><td class="num">0.901</td><td class="num">0.905</td><td class="num">0.904</td></tr>
@@ -1382,7 +1586,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 16.</b> Full configuration. LR = learning rate, EP = max epochs, BS = per-GPU batch size, GA = gradient accumulation, MaxL = max sequence length, WU = warmup fraction.</caption>
+          <caption><b>Table 17.</b> Full configuration. LR = learning rate, EP = max epochs, BS = per-GPU batch size, GA = gradient accumulation, MaxL = max sequence length, WU = warmup fraction.</caption>
           <thead><tr><th scope="col">Model</th><th scope="col" class="num">LR</th><th scope="col" class="num">EP</th><th scope="col" class="num">BS</th><th scope="col" class="num">GA</th><th scope="col" class="num">MaxL</th><th scope="col" class="num">WU</th></tr></thead>
           <tbody>
             <tr><td>Baseline-DistilBERT</td><td class="num">2×10⁻⁵</td><td class="num">3</td><td class="num">32</td><td class="num">1</td><td class="num">96</td><td class="num">0.06</td></tr>
@@ -1408,7 +1612,7 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
     <figure>
       <div class="table-scroll">
         <table>
-          <caption><b>Table 17.</b> Complete indicator groups, plus the six appended surface features.</caption>
+          <caption><b>Table 18.</b> Complete indicator groups, plus the six appended surface features.</caption>
           <thead><tr><th scope="col">Group</th><th scope="col">Members</th></tr></thead>
           <tbody>
             <tr><td class="mono">sst_pos</td><td style="text-align:left;white-space:normal">great, excellent, brilliant, terrific, wonderful, masterpiece, captivat*, impressive, delightful, superb</td></tr>
@@ -1427,6 +1631,76 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
         </table>
       </div>
     </figure>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     CODE AND ARTIFACT
+     ============================================================ -->
+<section id="code">
+  <div class="wrap">
+    <p class="eyebrow">Code and artifact</p>
+    <h2>Running this yourself</h2>
+    <div class="prose">
+      <p>The reference implementation is at <a href="https://github.com/surgellm-iwn/surgellm-iwn"><span class="mono">github.com/surgellm-iwn/surgellm-iwn</span></a>, MIT licensed. Every equation, theorem, algorithm and table on this page has a corresponding module, script and generated artifact; the repository's <span class="mono">CLAIMS.md</span> is the claim-by-claim map.</p>
+    </div>
+
+    <figure>
+      <pre style="max-height:none">git clone https://github.com/surgellm-iwn/surgellm-iwn
+cd surgellm-iwn
+pip install -e .                 <span class="k"># torch, numpy, pandas, matplotlib</span>
+make smoke                       <span class="k"># one end-to-end training run</span>
+make test                        <span class="k"># unit tests, one per stated property</span>
+bash scripts/run_all.sh          <span class="k"># every table and figure on this page</span></pre>
+      <figcaption>Quick start. <span class="mono">run_all.sh</span> regenerates every CSV under <span class="mono">results/tables/</span> and every figure under <span class="mono">results/figures/</span>; <span class="mono">scripts/10_latex_tables.py</span> emits booktabs fragments you can <span class="mono">\input</span> straight into the manuscript.</figcaption>
+    </figure>
+
+    <h3>What maps to what</h3>
+    <figure>
+      <div class="table-scroll">
+        <table>
+          <caption><b>Table 19.</b> Paper artifact to source module. Equation numbers follow the manuscript.</caption>
+          <thead><tr><th scope="col">Paper</th><th scope="col">Module</th><th scope="col">Generated artifact</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:left">Eq. 4 — feature extraction</td><td class="mono" style="text-align:left">features.py</td><td class="mono" style="text-align:left">feature_statistics.csv</td></tr>
+            <tr><td style="text-align:left">Eqs. 8–11 — standardization, IWN</td><td class="mono" style="text-align:left">normalization.py</td><td class="mono" style="text-align:left">normalization_contamination.csv</td></tr>
+            <tr><td style="text-align:left">Eqs. 3, 5–7 — task offset, gate</td><td class="mono" style="text-align:left">models/gate.py</td><td class="mono" style="text-align:left">parameter_report.csv</td></tr>
+            <tr><td style="text-align:left">Eqs. 12–14 — prefix, heads</td><td class="mono" style="text-align:left">models/surgellm.py</td><td class="mono" style="text-align:left">—</td></tr>
+            <tr><td style="text-align:left">Algorithm 1</td><td class="mono" style="text-align:left">train.py</td><td class="mono" style="text-align:left">checkpoints/*.pt + .json</td></tr>
+            <tr><td style="text-align:left">Definition 1 — ρ<sub>k</sub></td><td class="mono" style="text-align:left">theory/alignment.py</td><td class="mono" style="text-align:left">table15_rho_estimates.csv</td></tr>
+            <tr><td style="text-align:left">Lemma 4, Theorem 1</td><td class="mono" style="text-align:left">theory/bound.py</td><td class="mono" style="text-align:left">lemma4_lipschitz.csv, theorem1_bound.csv</td></tr>
+            <tr><td style="text-align:left">Proposition 2, Corollary 3</td><td class="mono" style="text-align:left">theory/degeneracy.py</td><td class="mono" style="text-align:left">proposition2_degeneracy.csv</td></tr>
+            <tr><td style="text-align:left">Appendix E — auto-extraction</td><td class="mono" style="text-align:left">autoextract.py</td><td class="mono" style="text-align:left">autoextract_report.json</td></tr>
+            <tr><td style="text-align:left">§6.2 — Welch + BH, bootstrap</td><td class="mono" style="text-align:left">eval/significance.py</td><td class="mono" style="text-align:left">table4_significance.csv, bootstrap_ci.csv</td></tr>
+            <tr><td style="text-align:left">§7.5 — failure modes</td><td class="mono" style="text-align:left">eval/failure_analysis.py</td><td class="mono" style="text-align:left">failure_modes.csv, failure_cases.csv</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </figure>
+
+    <h3>Verification notes</h3>
+    <div class="prose">
+      <p>Writing the artifact surfaced two things worth stating plainly on this page rather than leaving in a repository file.</p>
+    </div>
+
+    <div class="callout callout--warn">
+      <span class="callout__tag">Proposition 2, conclusion 3</span>
+      <p>Conclusions 1 and 2 reproduce strongly. Constructing the hypothesis directly — feeding the gate label-independent features, so <span class="mono">ρ<sub>k</sub> = 0</span> by construction — gives <span class="mono">‖W<sub>s</sub>‖</span> and <span class="mono">‖s′(x)‖</span> each collapsing by roughly 45× over 150 steps, with the closed-form decay <span class="mono">W<sub>s</sub> ← (1 − λη)W<sub>s</sub></span> matching the observed trajectory to within 10<sup>−5</sup>.</p>
+      <p>Conclusion 3, <span class="mono">g<sub>i</sub><sup>⋆</sup> → 1</span>, does not follow. Weight decay shrinks <span class="mono">W<sub>g</sub></span> alongside <span class="mono">W<sub>s</sub></span>, so the gate pre-activation decays and <span class="mono">g → σ(0) = 0.5</span>. The step "to minimize loss the gate routes all signal through h̃" needs a loss gradient pushing <span class="mono">g</span> upward, and once <span class="mono">s′ = 0</span> there is none: the fusion is <span class="mono">LN(g ⊙ h̃)</span> for <em>any</em> <span class="mono">g</span>, and the head absorbs whichever per-dimension scaling it is handed. <span class="mono">g</span> is unconstrained, not driven to 1.</p>
+      <p style="margin-bottom:0">The safety property is unaffected. Conclusion 4 and Corollary 3 both follow from <span class="mono">s′ → 0</span> alone, which is conclusion 2. A future revision could either drop conclusion 3 or add "weight decay on <span class="mono">W<sub>s</sub></span> only" as an explicit hypothesis.</p>
+    </div>
+
+    <div class="callout">
+      <span class="callout__tag">IWN is not a separability effect</span>
+      <p style="margin-bottom:0">A <em>converged</em> linear probe on the surgical features scores identically under Eq. 8 and Eq. 11 — as it must, since an affine model absorbs an affine change of input. The information content is unchanged; what changes is where the features land relative to a nonlinearity. Measured at initialization on the 9.3:1 pool, the ratio of minority to majority <span class="mono">‖s′(x)‖</span> entering the gate is 1.23 under global standardization and 0.97 under IWN. That asymmetry, not separability, is what §3.5 removes.</p>
+    </div>
+
+    <h3>Data availability</h3>
+    <div class="prose">
+      <p>D<sub>1</sub> (SST-2, via GLUE) and D<sub>2</sub> (HotPotQA) resolve to public HuggingFace datasets and need no configuration. <strong>D<sub>3</sub> (LLM-7) and D<sub>4</sub> (HumLLM) are cited in the manuscript as public releases pending a canonical URL/DOI</strong>, so the repository leaves their identifiers blank in <span class="mono">configs/datasets.yaml</span> and raises a descriptive error rather than guessing a substitute. Until those references resolve, the two tasks carrying the headline result cannot be reproduced from the paper alone — the highest-value outstanding item for this artifact.</p>
+      <p>For readers who want to exercise the pipeline before then, the repository ships an offline mode with seeded surrogate corpora that preserve the structural properties the claims depend on (the 9.3:1 D<sub>4</sub> pool among them). It establishes the direction and mechanism of each claim, never the absolute numbers, and <span class="mono">scripts/11_crosswalk.py</span> labels them accordingly.</p>
+    </div>
   </div>
 </section>
 
@@ -1480,25 +1754,44 @@ footer .wrap{ display:flex; justify-content:space-between; gap:1.5rem; flex-wrap
       <p style="margin:0">Noor Islam S. Mohammad · Uluğ Bayazıt<br>Department of Computer Science, Istanbul Technical University</p>
     </div>
     <div>
-      <p style="margin:0"><a href="#top">Back to top</a> · <a href="https://arxiv.org/abs/2606.24259">arXiv:2606.24259</a> · <a href="#cite">BibTeX</a></p>
-      <p style="margin:.4rem 0 0">Page content mirrors the manuscript. Where the two disagree, the manuscript is authoritative.</p>
+      <p style="margin:0">
+        <a href="#top">Back to top</a> ·
+        <a href="https://aclanthology.org/2026.trustnlp-main.47/">ACL Anthology</a> ·
+        <a href="https://aclanthology.org/2026.trustnlp-main.47.pdf">PDF</a> ·
+        <a href="https://arxiv.org/abs/2606.24259">arXiv</a> ·
+        <a href="https://github.com/surgellm-iwn/surgellm-iwn">GitHub</a> ·
+        <a href="https://doi.org/10.18653/v1/2026.trustnlp-main.47">DOI</a> ·
+        <a href="#cite">BibTeX</a>
+      </p>
+      <p style="margin:.4rem 0 0">Page content mirrors the manuscript. Where the two disagree, the manuscript is authoritative.<br>
+      Text and figures © the authors, CC BY 4.0. Code released under the MIT licence.</p>
     </div>
   </div>
 </footer>
 
 <!--
   ============================================================
-  BEFORE PUBLISHING — placeholders to replace
+  LINK STATUS
   ============================================================
-  1. hero: href="surgellm.pdf"        -> upload the PDF next to index.html
-  2. hero: Code button   href="#"     -> repository URL
-  3. hero: Slides button href="#"     -> Beamer slide deck (PDF)
-  4. hero: Poster button href="#"     -> A0 / NAACL-style poster (PDF)
-  5. author name links   href="#"     -> personal / scholar pages
-  6. add og:image and favicon
-  7. LLM-7 and HumLLM references are marked "author-check required"
-     in the manuscript; resolve canonical URL/DOI before publishing.
-  See AUDIT.md for the numerical consistency review.
+  RESOLVED
+    paper (PDF)   https://aclanthology.org/2026.trustnlp-main.47.pdf
+    anthology     https://aclanthology.org/2026.trustnlp-main.47/
+    arXiv         https://arxiv.org/abs/2606.24259
+    doi           https://doi.org/10.18653/v1/2026.trustnlp-main.47
+    code          https://github.com/surgellm-iwn/surgellm-iwn
+    scholar meta  citation_* tags + JSON-LD ScholarlyArticle
+
+  STILL OPEN
+    1. og:image   -> 1200x630 social card, then add
+                     <meta property="og:image" content="...">
+    2. favicon    -> <link rel="icon" href="/favicon.svg">
+    3. slides / poster -> add buttons to the hero when the PDFs exist
+    4. author links currently point at ACL Anthology author pages;
+       swap for personal / Scholar pages if preferred
+    5. LLM-7 and HumLLM are cited in the manuscript with
+       "author-check required" and no canonical URL/DOI. Until those
+       resolve, D3 and D4 cannot be reproduced from the paper alone.
+       See the "Data availability" note in the Code section.
   ============================================================
 -->
 
